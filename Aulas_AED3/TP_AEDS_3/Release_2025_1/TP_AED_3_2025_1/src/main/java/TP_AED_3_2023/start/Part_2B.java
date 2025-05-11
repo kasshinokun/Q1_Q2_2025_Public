@@ -1,0 +1,112 @@
+package TP_AED_3_2023.start;
+
+import TP_AED_3_2023.data.huffman.*;
+import TP_AED_3_2023.file.*;
+import TP_AED_3_2023.functions.*;
+
+public class Part_2B {
+    public static void main(String[]args){
+        //Menu Trabalho Pratico
+        int op;//Variavel de escolha
+        do{
+            System.out.println(Changes.set_Locale("\nTrabalho Prático - Parte 2-b"));
+            System.out.println("=====Compactação  e Criptografia - Testes=======");
+            System.out.println(Changes.set_Locale("\nMenu de Opções:\n"));
+            System.out.println("1 - 1) Testes: Huffman Encoder/Decoder==========");
+            /*Pode vir a ser usada futuramente
+            System.out.println("2 - 2) Testes===================================");
+            System.out.println("3 - 3) Testes===================================");
+            System.out.println("4 - 4) Testes===================================");
+            System.out.println("5 - 5) Testes===================================");
+            System.out.println("6 - 6) Testes===================================");
+            System.out.println("7 - 7) Testes===================================");
+            System.out.println("8 - 8) Testes===================================");
+            System.out.println("9 - 9) Testes===================================");
+            System.out.println("10 - 10) Testes=================================");
+            */
+            System.out.println("\n0 - Encerrar\n");
+            System.out.println(Changes.set_Locale("Por escolha uma opção:"));
+            op=Functions.only_Int();//Tratamento de entrada
+            //Procedimentos
+            switch(op){
+                //Procedimentos
+                case 1:
+                    //Procedimento #1
+                    System.out.println("\n1) Procedimento #1=============================="); 
+                    //Compressão de Huffman
+                    Encoder.callHuffman();
+                    System.out.println("\n================================================\n");
+                    break;
+                /*Pode vir a ser usada futuramente
+                case 2:
+                    //Procedimento #2
+                    System.out.println("\n2) Procedimento #2==============================");
+                    
+                    
+                    System.out.println("\n================================================\n");
+                    break;
+                case  3:
+                    //Procedimento #3
+                    System.out.println("\n3) Procedimento #3==============================");
+                    
+                    System.out.println("\n================================================\n");
+                    break;
+                
+                case  4:
+                    //Procedimento #4
+                    System.out.println("\n4) Procedimento #4==============================");
+                   
+                    System.out.println("\n================================================\n");
+                    break;
+                case  5:
+                    //Procedimento #5
+                    System.out.println("\n5) Procedimento #5==============================");
+                    
+                    System.out.println("\n================================================\n");
+                    break;
+                case 6:
+                    //Procedimento #6
+                    System.out.println("\n6) Procedimento #6==============================");
+                    
+                    System.out.println("\n================================================\n");
+                    break;
+                
+                case 7:
+                    //Procedimento #7
+                    System.out.println("\n7) Procedimento #7==============================");
+                    
+                    System.out.println("\n================================================\n");
+                    break;
+                case 8:
+                    //Procedimento #8
+                    System.out.println("\n8) Procedimento #8==============================");
+                    
+                    System.out.println("\n================================================\n");
+                    break;
+                case 9:
+                    //Procedimento #9
+                    System.out.println("\n9) Procedimento #9==============================");
+                    
+                    System.out.println("\n================================================\n");
+                    break;
+                case 10:
+                    //Procedimento #10
+                    System.out.println("\n10) Procedimento #10=========================");
+                    
+                    System.out.println("\n=============================================\n");
+                    break;
+                */
+                default:   
+                    if(op==0){
+                        System.out.println("\nProcesso finalizado");
+                        System.out.println("Retornando ao Menu\n");
+                        
+                    }else{
+                        System.out.println(Changes.set_Locale("\nOpção inválida."));
+                        System.out.println("Por favor, tente novamente.\n");
+                    }
+            }
+        }while(op!=0);//Condição de parada do programa
+ 
+    }
+}
