@@ -3,6 +3,7 @@ package menu;
 import estagio1.Menu;
 import estagio1.leitura.Functions;
 import estagio2.Menu2;
+import estagio3.callerCompact;
 public class main {
 
 	public static void main(String[] args){
@@ -25,7 +26,7 @@ public class main {
 					Menu2.parte_II();
 				    break;
 				case 3:
-					System.out.println("\nAguarde em desenvolvimento");
+					callerCompact.main(args);
 				    break;
 				case 4:
 					System.out.println("\nAguarde em desenvolvimento");
