@@ -14,8 +14,10 @@ def loadFromInside():
 
     heightInCentimeters = [22.25, 21.0, 20.0, 18.8, 17.75, 16.85, 15.9, 15.0, 14.1, 13.15, 12.5, 11.6, 11.0, 10.125, 9.75, 9.0, 8.4, 7.6, 7.1, 6.85, 6.4, 6.0, 5.55, 5.4, 5.1, 5.0]
     
-    dfInside = pd.DataFrame(list(zip(timeInSeconds, heightInCentimeters)), columns=['Time (s)', 'Height (cm)'])
-    
+    if not locale.getdefaultlocale()[0] == 'pt_BR':
+        dfInside = pd.DataFrame(list(zip(timeInSeconds, heightInCentimeters)), columns=['Time (s)', 'Height (cm)'])
+    else:
+        dfInside = pd.DataFrame(list(zip(timeInSeconds, heightInCentimeters)), columns=['Tempo (s)','Altura (cm)']) 
     return dfInside
 
 # --- 1. TorricelliCalculator (Python adaptation) ---
