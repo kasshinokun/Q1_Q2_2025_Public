@@ -1,0 +1,471 @@
+We are getting a syntax error in the `setup_ui` function, specifically in the `tab_view` section, at the point where we have an `else` without a corresponding `try`/`except`. The error message indicates that there is an `else` without an `except` or `finally` block.
+
+Looking at the code in the `tab_view` section, we have:
+
+```python
+
+if search_id_button:
+
+if record_id_input_str:
+
+try:
+
+...
+
+except ValueError:
+
+...
+
+except Exception as e:
+
+...
+
+else:   # This else is for the inner if (if record_id_input_str)
+
+st.info("?? Digite um ID de registro para buscar.")
+
+else:   # This else is for the outer if (if search_id_button)
+
+st.info("?? Digite um ID de registro para buscar.")
+
+```
+
+But note that the `else` after the `try` block is missing. Actually, the structure is:
+
+```python
+
+if search_id_button:
+
+if record_id_input_str:
+
+try:
+
+... # code that might raise
+
+except ...:
+
+...
+
+except ...:
+
+...
+
+else:
+
+... # inner else
+
+else:
+
+... # outer else
+
+```
+
+This structure does not have an `else` for the `try` block, so the error must be elsewhere.
+
+However, the error message points to line 1458, which in the provided code is:
+
+```python
+
+else:
+
+st.info("?? Registro não encontrado para o ID fornecido ou está inválido. Verifique o ID.")
+
+```
+
+But note: the code block for the `try` inside `if record_id_input_str` is:
+
+```python
+
+try:
+
+record_id_to_find = int(record_id_input_str)
+
+found_record_obj = db.get_record_by_id(record_id_to_find) # Returns DataObject
+
+if found_record_obj:
+
+... # display record and actions
+
+else:
+
+st.info("?? Registro não encontrado para o ID fornecido ou está inválido. Verifique o ID.")
+
+except ValueError:
+
+...
+
+except Exception as e:
+
+...
+
+```
+
+This is valid. So why the error?
+
+Looking at the error message:
+
+```
+
+File "C:\Users\Projeto Social Tiú\Videos\Convert to Python Code\python\tp\teste\getApp\stInsertDataObjectPY.py", line 1458
+
+else:
+
+^^^^
+
+SyntaxError: expected 'except' or 'finally' block
+
+```
+
+Line 1458 in the provided code is:
+
+```python
+
+else:   # This is the else of the inner if (if found_record_obj)
+
+st.info("?? Registro não encontrado para o ID fornecido ou está inválido. Verifique o ID.")
+
+```
+
+But note that the `else` is aligned with the `if found_record_obj` inside the `try` block. There is no issue.
+
+However, the error message says the error is at the `else` and that it expected an `except` or `finally` block. This suggests that the `try` block is not properly closed.
+
+Looking at the `try` block, we see that after the `if found_record_obj` block (which has an `else`), we have two `except` blocks and then we close the `try` block. So it should be fine.
+
+But note: the `try` block is:
+
+```python
+
+try:
+
+record_id_to_find = int(record_id_input_str)
+
+found_record_obj = db.get_record_by_id(record_id_to_find) # Returns DataObject
+
+if found_record_obj:
+
+... # long block of code
+
+else:
+
+st.info("?? Registro não encontrado para o ID fornecido ou está inválido. Verifique o ID.")
+
+except ValueError:
+
+...
+
+except Exception as e:
+
+...
+
+```
+
+This is valid. However, the error might be due to an indentation issue in the provided code? The provided code in the question is very long and we cannot see the exact line numbers.
+
+Alternatively, the error might be in a different part of the code. The error message says the error is at line 1458, which in the provided code is the `else` block inside the `try` block.
+
+But note: the error message says "expected 'except' or 'finally' block", meaning that the `try` block is not followed by an `except` or `finally`. This can happen if there is a `try` block that is not followed by any `except` or `finally` in the same block.
+
+Looking at the code again, we see that after the `try` block we have:
+
+```python
+
+try:
+
+... # code
+
+except ValueError:
+
+...
+
+except Exception as e:
+
+...
+
+```
+
+So that is correct.
+
+Another possibility: the error might be due to a mix of tabs and spaces? The error message points to an `else` that is at the same level as the `try`? That would be a problem.
+
+Given the complexity and the fact that the entire code is too long to debug here, I suspect the issue might be in the indentation of the `else` block. However, the provided code in the question is formatted with spaces.
+
+But note: the error message says the error is at the `else` block. Let me check the context around the `else`:
+
+```python
+
+if found_record_obj:
+
+... # about 100 lines of code
+
+else:
+
+st.info("?? Registro não encontrado para o ID fornecido ou está inválido. Verifique o ID.")
+
+```
+
+The `else` is correctly aligned with the `if`.
+
+Alternatively, the error might be in a different `try` block in the same file? The error message says the error is at line 1458, which in the provided code is the `else` block in the `tab_view` section.
+
+But note: the error is a "Script compilation error", meaning it's a syntax error that prevents the script from being compiled. The error is in the `ast.parse` step.
+
+After re-examining the code, I notice that in the `tab_view` section, inside the `if found_record_obj` block, there is a nested `try` block without an `except`? Let me check:
+
+Inside the `if found_record_obj` block, we have:
+
+```python
+
+# Clear confirmation state if search ID changes
+
+if "search_id_input_val" not in st.session_state or st.session_state.search_id_input_val != record_id_input_str:
+
+if f"confirm_delete_found_{found_record_obj.id}" in st.session_state:
+
+del st.session_state[f"confirm_delete_found_{found_record_obj.id}"]
+
+st.session_state.search_id_input_val = record_id_input_str # Store current search ID
+
+```
+
+There is no `try` block in that part.
+
+I suspect the issue might be that the `else` block at line 1458 is actually at the same indentation level as the `try` block? But that is not the case in the provided code.
+
+Alternatively, the problem might be that the `try` block is too long and the parser is getting confused? Or there might be an unclosed parenthesis or bracket.
+
+Given the time, I will propose a refactoring: move the entire `try` block into a helper function to reduce the complexity and avoid potential parser issues.
+
+But note: the error is occurring during the compilation of the script, so it's a syntax issue.
+
+Looking again at the provided code for the `try` block, I see that the `else` block is:
+
+```python
+
+else:
+
+st.info("?? Registro não encontrado para o ID fornecido ou está inválido. Verifique o ID.")
+
+```
+
+This `else` is for the `if found_record_obj`. It is inside the `try` block. There is no syntax error in that.
+
+However, note that the `try` block spans over 100 lines. It is possible that there is an unclosed parenthesis or bracket inside the `try` block that we are not seeing.
+
+Alternatively, the issue might be in the `display_activity_log` function, which is defined earlier? But the error points to line 1458, which is in the `tab_view` section.
+
+Given the complexity, I will instead suggest to run the code through a linter to find the exact issue. However, since we cannot run it, we must rely on visual inspection.
+
+I notice that in the `tab_view` section, after the `else` block (the one that is causing the error), there is:
+
+```python
+
+# Clear confirmation state if search ID changes
+
+if "search_id_input_val" not in st.session_state or st.session_state.search_id_input_val != record_id_input_str:
+
+if f"confirm_delete_found_{found_record_obj.id}" in st.session_state:
+
+del st.session_state[f"confirm_delete_found_{found_record_obj.id}"]
+
+st.session_state.search_id_input_val = record_id_input_str # Store current search ID
+
+```
+
+But note: this code is inside the `if found_record_obj` block. However, in the `else` branch of the `if found_record_obj`, we do not have the variable `found_record_obj` defined. So this code would cause a `NameError` at runtime, but not a syntax error.
+
+Given the error message, I suspect there might be a mix of tabs and spaces in the code, causing the `else` to be at a different indentation level than expected. We should replace all tabs with spaces and ensure consistent indentation.
+
+But since we cannot see the actual file, we must rely on the provided code.
+
+Alternatively, the error might be due to an unclosed parenthesis in the `try` block. For example, we have:
+
+```python
+
+st.markdown(f"**ID do Registro:** `{record_obj.id if record_obj.id else 'N/A'}`")
+
+```
+
+There are several lines with parentheses and brackets. It is possible that one of them is not closed properly.
+
+Given the complexity, I will not attempt to fix this specific issue without being able to run the code. Instead, I will note that the error is a syntax error and suggest to run the code through an IDE to find the exact issue.
+
+However, since the user is encountering the error, I will provide a corrected version of the code by restructuring the `try` block to be shorter and by carefully checking the indentation.
+
+But note: the error message points to an `else` block that is at the same level as the `try` block, which is invalid. So we must ensure that the `else` is inside the `try` block.
+
+I see that the `else` is intended to be inside the `try` block, but perhaps the indentation is off by one level? Let me adjust:
+
+In the provided code, the structure is:
+
+```python
+
+try:
+
+record_id_to_find = int(record_id_input_str)
+
+found_record_obj = db.get_record_by_id(record_id_to_find)
+
+if found_record_obj:
+
+... # many lines
+
+else:
+
+... # this is line 1458
+
+except ...:
+
+```
+
+We must ensure that the `else` is aligned with the `if` and that the entire block is inside the `try`.
+
+Given the above, I will now re-provide the entire code with a focus on fixing the indentation and structure of the `try` block in the `tab_view` section. However, due to the length, I will only show the corrected section.
+
+But note: the entire code is too long to re-provide. Instead, I will show the corrected `tab_view` section for the search by ID part:
+
+```python
+
+if search_id_button:
+
+if record_id_input_str:
+
+try:
+
+record_id_to_find = int(record_id_input_str)
+
+found_record_obj = db.get_record_by_id(record_id_to_find) # Returns DataObject
+
+if found_record_obj:
+
+st.subheader(f"? Registro encontrado para ID: `{record_id_to_find}`")
+
+with st.expander("Detalhes do Registro Encontrado", expanded=True):
+
+display_record_details(found_record_obj)
+
+st.markdown("---")
+
+st.subheader("Ações para o Registro Encontrado")
+
+col_edit_found, col_delete_found = st.columns(2)
+
+with col_edit_found:
+
+if st.button(f"?? Editar Este Registro ({found_record_obj.id})", key=f"edit_found_{found_record_obj.id}"):
+
+st.session_state.edit_record_id = found_record_obj.id
+
+st.session_state.edit_record_data = found_record_obj # Pass DataObject instance
+
+st.session_state.show_edit_form = True
+
+st.rerun()
+
+with col_delete_found:
+
+# Use a temporary state for confirmation
+
+if f"confirm_delete_found_{found_record_obj.id}" not in st.session_state:
+
+st.session_state[f"confirm_delete_found_{found_record_obj.id}"] = False
+
+if st.button(f"?? Excluir Este Registro ({found_record_obj.id})", key=f"delete_found_{found_record_obj.id}", type="secondary"):
+
+st.session_state[f"confirm_delete_found_{found_record_obj.id}"] = True
+
+st.rerun() # Rerun to show confirmation
+
+if st.session_state[f"confirm_delete_found_{found_record_obj.id}"]:
+
+st.warning(f"?? Tem certeza que deseja excluir o registro `{found_record_obj.id}`? Esta ação o marcará como inválido e removerá do índice.")
+
+col_confirm = st.columns(2)
+
+with col_confirm[0]:
+
+if st.button("? Confirmar Exclusão", key=f"confirm_delete_found_yes_{found_record_obj.id}"):
+
+try:
+
+if db.delete_record(found_record_obj.id): # Call delete on backend
+
+st.success("?? Registro excluído com sucesso (marcado como inválido e removido do índice).")
+
+logger.info(f"Record {found_record_obj.id} deleted via UI.")
+
+st.session_state.records_dirty = True
+
+del st.session_state[f"confirm_delete_found_{found_record_obj.id}"]
+
+st.rerun() # Rerun to refresh UI
+
+else:
+
+st.error("? Falha ao excluir registro.")
+
+except Exception as e:
+
+st.error(f"?? Erro ao excluir registro: {e}")
+
+logger.error(f"UI delete error: {traceback.format_exc()}")
+
+with col_confirm[1]:
+
+if st.button("? Cancelar", key=f"confirm_delete_found_no_{found_record_obj.id}"):
+
+st.info("Operação de exclusão cancelada.")
+
+del st.session_state[f"confirm_delete_found_{found_record_obj.id}"]
+
+st.rerun() # Rerun to clear confirmation
+
+# Clear confirmation state if search ID changes
+
+if "search_id_input_val" not in st.session_state or st.session_state.search_id_input_val != record_id_input_str:
+
+if f"confirm_delete_found_{found_record_obj.id}" in st.session_state:
+
+del st.session_state[f"confirm_delete_found_{found_record_obj.id}"]
+
+st.session_state.search_id_input_val = record_id_input_str # Store current search ID
+
+else:
+
+st.info("?? Registro não encontrado para o ID fornecido ou está inválido. Verifique o ID.")
+
+except ValueError:
+
+st.warning("?? Por favor, digite um ID de registro válido (número inteiro).")
+
+except Exception as e:
+
+st.error(f"?? Erro ao buscar registro: {e}")
+
+logger.error(f"UI search by ID error: {traceback.format_exc()}")
+
+else:
+
+st.info("?? Digite um ID de registro para buscar.")
+
+else:
+
+st.info("?? Digite um ID de registro para buscar.")
+
+```
+
+The change I made is to move the "Clear confirmation state" block inside the `if found_record_obj` block, because it uses `found_record_obj.id`, which is only defined if `found_record_obj` is not None. Also, this block was previously placed outside the `if found_record_obj` block, which might have caused an indentation issue.
+
+Additionally, I ensured that the `else` block for `if found_record_obj` is properly inside the `try` block.
+
+But note: the error was a syntax error at the `else` block, which is now at a different line number. Hopefully this restructuring will fix the issue.
+
+If the error persists, I recommend carefully checking the indentation of the entire `try` block and ensuring that there are no mixed tabs and spaces.
+
+Given the above, I will now provide the entire corrected code. However, due to the character limit, I will only show the corrected sections. But since the user might have other changes, I will provide the whole file with the fix applied.
+
+But note: the provided code is very long. I will only include the fixed `tab_view` section for the search by ID part, and hope that the user can replace that section.
+
+Alternatively, I will provide the entire file with the fixed section.
+
+Given the constraints, I will now write the entire file with the fixed section.
