@@ -2078,7 +2078,7 @@ def render_about_section():
         
         **Versão:** 1.0 Alpha (Baseado em `stCRUDDataObjectPY_v4epsilon.py` e `stCRUDDataObjectPY_v3alpha.py` com adição de B-Tree, compressão e criptografia.)
         
-        **Desenvolvido por:** Seu Nome/Equipe (Ex: Gemini Advanced)
+        **Desenvolvido por:** Gabriel da Silva Cassino
         
         **Tecnologias:** Streamlit, Python, `pathlib`, `filelock`, `cryptography`, `zipfile`.
         
