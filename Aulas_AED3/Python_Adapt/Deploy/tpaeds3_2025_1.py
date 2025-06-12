@@ -2422,8 +2422,11 @@ def render_about_section():
     * **`pathlib`**: Para manipulação de caminhos de arquivos de forma orientada a objetos.
     * **`pandas`**: Para manipulação e exibição de dados tabulares.
     * **`matplotlib`**: Para geração de gráficos de comparação.
+    * **`cryptography`**: Para gerar a lógica de Encriptação padrão e híbrida 
     """)
-
+    st.write("Código desenvolvido por Gabriel da Silva Cassino")
+    st.write("OBS. IMPORTANTE: este código é uma adaptação feita a partir do Java")
+    st.write("ainda está em estágio pre-alpha")
 # --- FUNÇÃO AUXILIAR PARA LEITURA E NORMALIZAÇÃO DE CSV ---
 def read_and_normalize_csv_data(csv_file_path: str) -> List[Dict[str, Any]]:
     """
