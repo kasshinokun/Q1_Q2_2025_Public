@@ -1,3 +1,5 @@
+#stCryptoPY_v0alpha versão 
+
 import streamlit as st
 import os
 import struct
