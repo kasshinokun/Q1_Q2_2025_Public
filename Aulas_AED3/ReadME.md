@@ -5,7 +5,8 @@ Instituição: PUC Minas – Coração Eucarístico
 <br>Aluno: Gabriel da Silva Cassino 
 <br>
 - Base de dados:
-   - [Projeto na Web - Prototipo](https://tp-aeds2025-1.streamlit.app/) 
+   - [Projeto na Web - Prototipo](https://tpaeds320251.streamlit.app/)
+  
    - ```Sobre```:
 <br>Para a criação do arquivo de dados foi utilizada a base de dados sobre acidentes de 
 <br>trânsito proveniente do site https://www.kaggle.com/datasets/oktayrdeki/traffic-accidents 
