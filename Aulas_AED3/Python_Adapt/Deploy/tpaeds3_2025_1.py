@@ -13,7 +13,7 @@ import hashlib
 import time  # For simulating delays/retries if needed, and for timing operations
 import filelock # For cross-platform file locking
 
-Huffman_LZW_UI  import main as render_compress_ui
+
 
 # Configure logging
 logging.basicConfig(
@@ -1084,8 +1084,7 @@ def setup_ui():
             update_record_ui(db)
         elif operation == "📤 Import from CSV":
             import_from_csv(db)
-        elif operation == "📦 Compactação ":
-            render_compress_ui()    
+        
     except DatabaseError as e:
         st.error(f"🚨 A critical database error occurred: {str(e)}. Please check application logs.")
         logger.critical(f"Critical DatabaseError in main application setup: {traceback.format_exc()}")
