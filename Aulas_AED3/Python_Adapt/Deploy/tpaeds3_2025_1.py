@@ -13,6 +13,8 @@ import hashlib
 import time  # For simulating delays/retries if needed, and for timing operations
 import filelock # For cross-platform file locking
 
+Huffman_LZW_UI  import main as render_compress_ui
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO, # Set to logging.DEBUG to see detailed date parsing attempts
@@ -1043,7 +1045,13 @@ def setup_ui():
             st.header("Navigation")
             operation = st.radio(
                 "Select Operation",
-                ["📄 View All Records", "🔍 Search by ID", "✍️ Add New Record", "🔄 Update Existing Record", "📤 Import from CSV"],
+                ["📄 View All Records", 
+                 "🔍 Search by ID",
+                 "✍️ Add New Record", 
+                 "🔄 Update Existing Record", 
+                 "📤 Import from CSV",
+                 "📦 Compactação ",
+                 "🔒 Criptografia "],
                 label_visibility="visible",
                 key="sidebar_operation" # Ensure unique key
             )
@@ -1076,7 +1084,8 @@ def setup_ui():
             update_record_ui(db)
         elif operation == "📤 Import from CSV":
             import_from_csv(db)
-            
+        elif operation == "📦 Compactação ":
+            render_compress_ui()    
     except DatabaseError as e:
         st.error(f"🚨 A critical database error occurred: {str(e)}. Please check application logs.")
         logger.critical(f"Critical DatabaseError in main application setup: {traceback.format_exc()}")
