@@ -14,9 +14,9 @@ import re
 import logging
 
 # --- Configurações Iniciais e Logging (do DataObject_3.py) ---
-DOCUMENTS_PATH = Path.home() / "DataDB"
-DATA_FOLDER = DOCUMENTS_PATH / "Data"
-LOG_FILE = DATA_FOLDER / 'traffic_accidents.log'
+DOCUMENTS_PATH =  os.path.join(Path.home() , "DataDB")
+DATA_FOLDER =  os.path.join(DOCUMENTS_PATH ,"Data")
+LOG_FILE =  os.path.join(DATA_FOLDER, 'traffic_accidents.log')
 
 VALID_DATE_FORMATS = ('%Y-%m-%d', '%m-%d-%Y', '%d-%m-%Y',
                       '%Y/%m/%d', '%m/%d/%Y', '%d/%m/%Y',
