@@ -83,9 +83,9 @@ MAX_BACKUPS = 5       # Keep only the last N backups
 MAX_LOG_ENTRIES_DISPLAY = 10 # Max number of log entries to display in the registry
 
 
-if not TEST_TEXT_FILE.exists():
-    with open(TEST_TEXT_FILE, "w", encoding="utf-8") as f:
-        f.write("This is a test document for encryption and decryption. " * 100) # Make it reasonably large
+#if not TEST_TEXT_FILE.exists():
+with open(TEST_TEXT_FILE, "w", encoding="utf-8") as f:
+    f.write("This is a test document for encryption and decryption. " * 100) # Make it reasonably large
 
 # --- Data Fields ---
 # Define all fields for the DataObject and their expected types/validation rules
