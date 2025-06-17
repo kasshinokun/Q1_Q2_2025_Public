@@ -1051,7 +1051,7 @@ def setup_ui():
                  "🔄 Update Existing Record", 
                  "📤 Import from CSV",
                  "📦 Compactação ",
-                 "🔒 Criptografia "
+                 "🔒 Criptografia ",
                  "Busca por KMP"
                 ],
                 label_visibility="visible",
