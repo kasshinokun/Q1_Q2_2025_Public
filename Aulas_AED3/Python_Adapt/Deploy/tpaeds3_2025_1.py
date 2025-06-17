@@ -1180,9 +1180,9 @@ def setup_ui():
             import_from_csv(db)
         elif operation =="Busca por Casamento de Padrão":
             pattern_search_ui(db)       
-        elif operation =="Administração"
+        elif operation =="Administração":
             show_admin_ui(db)        
-        elif operation =="Sobre o Projeto"
+        elif operation =="Sobre o Projeto":
             show_about_ui()
     except DatabaseError as e:
         st.error(f"🚨 A critical database error occurred: {str(e)}. Please check application logs.")
