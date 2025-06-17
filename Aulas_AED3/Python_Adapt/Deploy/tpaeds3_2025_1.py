@@ -83,9 +83,6 @@ MAX_BACKUPS = 5       # Keep only the last N backups
 MAX_LOG_ENTRIES_DISPLAY = 10 # Max number of log entries to display in the registry
 
 
-#if not TEST_TEXT_FILE.exists():
-with open(TEST_TEXT_FILE, "w", encoding="utf-8") as f:
-    f.write("This is a test document for encryption and decryption. " * 100) # Make it reasonably large
 
 # --- Data Fields ---
 # Define all fields for the DataObject and their expected types/validation rules
@@ -3177,7 +3174,13 @@ class CryptographyHandler:
             f.write(public_pem)
         
         return public_key_path, private_key_path
-
+    
+    @staticmethod
+    def generate_sample():
+        #if not TEST_TEXT_FILE.exists():
+        with open(TEST_TEXT_FILE, "wb", encoding="utf-8") as f:
+            f.write("This is a test document for encryption and decryption. " * 100) # Make it reasonably large
+    
     @staticmethod
     def hybrid_encrypt_file(input_file: str, public_key_file: str, output_file: str):
         with open(input_file, 'rb') as f:
@@ -3259,6 +3262,9 @@ class CryptographyHandler:
 def show_encryption_ui():
     st.title("Ferramenta de Criptografia de Arquivos")
 
+    CryptographyHandler.generate_sample() #arquivo de teste
+
+    
     # Opções para o selectbox
     operations = [
         "Blowfish Criptografar",
