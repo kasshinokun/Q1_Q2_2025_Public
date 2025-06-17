@@ -1137,7 +1137,10 @@ def setup_ui():
                  "🔄 Update Existing Record", 
                  "📤 Import from CSV",
                  "📦 Compactação ",
-                 "🔒 Criptografia "],
+                 "🔒 Criptografia ",
+                 "Busca por Casamento de Padrão",
+                 "Administração",
+                 "Sobre o Projeto",],
                 label_visibility="visible",
                 key="sidebar_operation" # Ensure unique key
             )
@@ -1160,6 +1163,7 @@ def setup_ui():
             display_activity_log() # Display the activity log
         
         # Dispatch based on selected operation
+        
         if operation == "📄 View All Records":
             view_all_records(db)
         elif operation == "🔍 Search by ID":
@@ -1168,9 +1172,18 @@ def setup_ui():
             add_new_record(db)
         elif operation == "🔄 Update Existing Record":
             update_record_ui(db)
+        elif operation == "📦 Compactação":
+            show_compression_ui()
+        elif operation == "🔒 Criptografia":
+            show_encryption_ui()   
         elif operation == "📤 Import from CSV":
             import_from_csv(db)
-        
+        elif operation =="Busca por Casamento de Padrão":
+            pattern_search_ui(db)       
+        elif operation =="Administração"
+            show_admin_ui(db)        
+        elif operation =="Sobre o Projeto"
+            show_about_ui()
     except DatabaseError as e:
         st.error(f"🚨 A critical database error occurred: {str(e)}. Please check application logs.")
         logger.critical(f"Critical DatabaseError in main application setup: {traceback.format_exc()}")
@@ -3547,7 +3560,7 @@ def show_encryption_ui():
             else:
                 st.warning("Por favor, selecione um arquivo de entrada, uma chave privada e forneça um nome de saída.")
 
-def show_admin_ui():#"⚙️ Administration":  
+def pattern_search_ui(db: TrafficAccidentsDB):#"⚙️ Administration":  
     st.write("Em desenvolvimento")        
 def show_about_ui() :#"🧑‍💻 About ":  
     """Exibe informações sobre a aplicação."""
@@ -3579,7 +3592,7 @@ def show_about_ui() :#"🧑‍💻 About ":
 
 
 # --- Nova Tela: Administração ---
-def admin_screen(db: TrafficAccidentsDB):
+def show_admin_ui(db: TrafficAccidentsDB):
     st.header("⚙️ Administração do Sistema")
 
     st.markdown("---")
