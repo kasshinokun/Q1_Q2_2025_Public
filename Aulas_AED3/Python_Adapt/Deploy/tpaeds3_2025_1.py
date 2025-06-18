@@ -1052,7 +1052,7 @@ def setup_ui():
                  "📤 Import from CSV",
                  "📦 Compactação ",
                  "🔒 Criptografia ",
-                 "Busca por KMP"
+                 "Busca por Aho-Corasick"
                 ],
                 label_visibility="visible",
                 key="sidebar_operation" # Ensure unique key
