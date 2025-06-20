@@ -7,12 +7,13 @@ Instituição: PUC Minas – Coração Eucarístico
 - Base de dados:
    - [Projeto na Web - Prototipo](https://tpaeds320251.streamlit.app/)
   
-<br>
+
 [Link para pasta Inicial](https://github.com/kasshinokun/Q1_Q2_2025_Public/blob/main/Aulas_AED3/)
-<br>
+
 [Link para pasta da etapa 5](https://github.com/kasshinokun/Q1_Q2_2025_Public/blob/main/Aulas_AED3/TP_AEDS_III_E5)
-#### Etapa 4 e 5
-Buscou-se fazer a migração para Streamlit-Python, porém a versão final foi em Java
+
+#### Objetivo
+Buscou-se fazer a migração para Streamlit-Python abrangendo da Etapa 1 a 5
 ##### Python - descrição (Ver pasta Deploy)
 Arquivo de Indice: [ID-cabeçalho-int]-->[Índices]
 <br>Estrutura de Índice: [ID-int][validador-bool][checksum-String][Posição-long]
