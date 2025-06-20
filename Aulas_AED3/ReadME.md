@@ -33,7 +33,7 @@ O projeto simplificado estará em TP_AED_E3, para permitir uma melhor análise d
 <br>
 #### Etapa 1
 Etapa 1 foi dividida em modulos
-
+[Link da pasta](https://github.com/kasshinokun/Q1_Q2_2025_Public/tree/main/Aulas_AED3/TP_AEDS_3)
 ##### Objeto da Etapa
 A classe DataObject recebe a ID e um vetor de Strings, os quais são atribuídos ao objeto da <br>classe, usufruindo de tratamentos de entrada de dados pela classe Functions
 <br>A ID é uma variavel int gerada pelo código
@@ -101,6 +101,7 @@ A classe Functions ainda é usada para realiza os tratamentos de entrada de dado
 <br>na Etapa 2 assim como na Etapa 1
 
 #### Etapa 3
+[pasta Etapa 3](https://github.com/kasshinokun/Q1_Q2_2025_Public/tree/main/Aulas_AED3/TP_AED_E3)
 Os códigos de compactação e descompactação de Huffman e LZW dependendo da classe pode haver dependência ou não
 <br>e especialização em tipo de leitura/escrita para executar os processos sobre o dado recebido(arquivo .db ou .csv)
 ##### Huffman
