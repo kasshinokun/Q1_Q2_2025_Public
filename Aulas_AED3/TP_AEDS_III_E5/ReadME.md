@@ -8,7 +8,9 @@ Instituição: PUC Minas – Coração Eucarístico
 ### Detalhamento de Etapas 4 e 5
 #### Etapa 4 e 5
 Buscou-se fazer a migração para Streamlit-Python, porém a versão final foi em Java
-##### Python
+##### Python 
+[Projeto-Prototipo Pasta de testes e deploy](https://github.com/kasshinokun/Q1_Q2_2025_Public/tree/main/Aulas_AED3/Python_Adapt)
+
 Arquivo de Indice: [ID-cabeçalho-int]-->[Índices]
 <br>Estrutura de Índice: [ID-int][validador-bool][checksum-String][Posição-long]
 <br><br>Arquivo de dados: [ID-cabeçalho-int]-->[Registros]
