@@ -150,7 +150,7 @@ Arquivo de Indice: [ID-cabeçalho-int]-->[Índices]
 <br>Compactação: processos em LZW e Huffman, com grafico comparativo
 <br>Criptografia: Criptografia em Blowfish, AES Padrão, AES-RSA e por Cifragem Vigenere-Cesár
 <br>Busca por Casamento Padrão: Usaria a estrutura do índice invertido de arvore b para trazer as ID's com os padroes
-##### Versão Final em Java
+##### Versão Final em Java (ver link para pasta etapa 5)
 Foi feita a adaptação para aproximar o código Java a estrutura em Python
 <br>Cada etapa foi um estágio, tendo Vigenere-Cesar como apendice de StageFour(Estagio 4) e teste de toda estrutura no módulo 5
 <br>O Modulo/Estágio I - Essencialmente operções CRUD sem melhorias e busca simples com adicional do Aho-Corasik
