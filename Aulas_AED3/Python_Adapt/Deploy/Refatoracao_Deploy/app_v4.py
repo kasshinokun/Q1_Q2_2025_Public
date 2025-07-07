@@ -766,54 +766,55 @@ def add_record(add_registry,save_settings):
         cols1 = st.columns(3)
         with cols1[0]:
             crash_type = st.text_input(
-                "Tipo de Acidente", key="crash_type" 
-            )
+                            "Crash Type",
+                            key="crash_type"
+                        )
             traffic_control_device = st.selectbox(
-                "Dispositivo de Controle de Tráfego",
-                ["DESCONHECIDO", "SINAL DE TRÁFEGO", "PLACA DE PARE", "PLACA DE RENDIMENTO", "NENHUM", "OUTRO"], 
+                "Traffic Control Device",
+                ["UNKNOWN", "TRAFFIC SIGNAL", "STOP SIGN", "YIELD SIGN", "NONE", "OTHER"],
                 index=0,
                 key="tcd"
             )
             weather_condition = st.selectbox(
-                "Condição Climática",
-                ["DESCONHECIDO", "LIMPO", "CHUVA", "NEVE", "NEBLINA", "VENTOS FORTES", "GEADA", "OUTRO"], 
+                "Weather Condition",
+                ["UNKNOWN", "CLEAR", "RAIN", "SNOW", "FOG", "SEVERE CROSSWINDS", "SLEET", "OTHER"],
                 index=0,
                 key="weather"
             )
             lighting_condition = st.selectbox(
-                "Condição de Iluminação", 
-                ["DESCONHECIDO", "LUZ DO DIA", "ESCURIDÃO - ILUMINADO", "ESCURIDÃO - NÃO ILUMINADO", "CREPÚSCULO/AMANHECER"], 
+                "Lighting Condition",
+                ["UNKNOWN", "DAYLIGHT", "DARK - LIGHTED", "DARK - NOT LIGHTED", "DUSK/DAWN"],
                 index=0,
                 key="lighting"
             )
         with cols1[1]:
-            first_crash_type = st.text_input("Primeiro Tipo de Acidente (Específico)", key="first_crash_type") 
-            trafficway_type = st.text_input("Tipo de Via", key="trafficway_type") 
-            alignment = st.text_input("Alinhamento", key="alignment")
+            first_crash_type = st.text_input("First Crash Type (Specific)",  key="first_crash_type")
+            trafficway_type = st.text_input("Trafficway Type", key="trafficway_type")
+            alignment = st.text_input("Alignment", key="alignment")
             roadway_surface_cond = st.selectbox(
-                "Condição da Superfície da Via", 
-                ["DESCONHECIDO", "SECO", "MOLHADO", "NEVE/GELO", "AREIA/LAMA/SUJEIRA/ÓLEO"], 
+                "Roadway Surface Condition",
+                ["UNKNOWN", "DRY", "WET", "SNOW/ICE", "SAND/MUD/DIRT/OIL"],
                 index=0,
                 key="surface_condition"
             )
         with cols1[2]:
             road_defect = st.selectbox(
-                "Defeito na Via", 
-                ["NENHUM", "BURACOS", "DEFEITO NO ACOSTAMENTO", "DETRITOS NA VIA", "OUTRO"],
+                "Road Defect",
+                ["NONE", "RUT, HOLES", "SHOULDER DEFECT", "DEBRIS ON ROADWAY", "OTHER"],
                 index=0,
                 key="road_defect"
             )
             intersection_related_i = st.selectbox(
-                "Relacionado à Interseção?", 
-                ["NÃO", "SIM"],
+                "Intersection Related?",
+                ["NO", "YES"],
                 index=0,
                 key="intersection_related"
             )
-            damage = st.text_input("Descrição do Dano",  key="damage")
-            prim_contributory_cause = st.text_input("Causa Contributiva Primária", key="prim_cause")
+            damage = st.text_input("Damage Description",  key="damage")
+            prim_contributory_cause = st.text_input("Primary Contributory Cause", key="prim_cause")
             most_severe_injury = st.selectbox(
-                "Lesão Mais Severa",
-                ["NENHUMA", "FATAL", "INCAPACITANTE", "NÃO-INCAPACITANTE", "RELATADA, NÃO EVIDENTE"],
+                "Most Severe Injury",
+                ["NONE", "FATAL", "INCAPACITATING", "NON-INCAPACITATING", "REPORTED, NOT EVIDENT"],
                 index=0,
                 key="most_severe_injury"
             )
