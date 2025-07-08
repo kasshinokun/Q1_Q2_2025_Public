@@ -2,8 +2,11 @@ import struct
 import json
 import hashlib
 import os
-import fcntl # Para sistemas Unix-like
-import filelock # Importar a biblioteca filelock
+import fcntl
+from typing import Any, Dict # Para sistemas Unix-like
+import filelock
+
+from add_registry import DataObject # Importar a biblioteca filelock
 
 # Assumindo que DataObject, Functions e outras dependências de app_v6.py estão disponíveis.
 # Importar DataObject e Functions de app_v6.py
