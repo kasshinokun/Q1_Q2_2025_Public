@@ -833,7 +833,7 @@ def add_record(add_registry,save_settings):
                             min_value=0.0, step=0.1,
                             key="injuries_total"
                         )
-        submitted = st.button("💾 Salvar Registro", use_container_width=True)
+        submitted = st.button("💾 Salvar Registro" if save_settings =="Etapa 1" else "💾 Salvar Registro e Atualizar Índice", use_container_width=True)
     if add_registry=="Arquivo CSV":
         st.write("Arquivo CSV")
 # =====================================================================
@@ -1004,21 +1004,7 @@ def main():
             elif uploaded_db_file_e2 is not None or uploaded_idx_file_e2 is not None:
                 st.warning("Por favor, carregue AMBOS os arquivos (.db e .idx) para esta operação.")
         elif sub_option_etapa2 == "Inserir um registro":
-            st.subheader("➕ Inserir Novo Registro (com Atualização de Índice)")
-            st.write("Adicione um novo registro e garanta que o índice seja atualizado automaticamente.")
-            with st.form("insert_record_form_e2"):
-                col1, col2 = st.columns(2)
-                with col1:
-                    data_acidente = st.date_input("Data do Acidente", key="e2_data", help="Data do ocorrido.")
-                    gravidade = st.selectbox("Gravidade", ["Leve", "Moderada", "Grave", "Fatal"], key="e2_gravidade")
-                with col2:
-                    localizacao = st.text_input("Localização", key="e2_local", help="Local do acidente.")
-                    veiculos_envolvidos = st.number_input("Veículos Envolvidos", min_value=1, value=1, key="e2_veiculos")
-                observacoes = st.text_area("Observações", key="e2_obs")
-
-                submitted_e2 = st.form_submit_button("Inserir Registro e Atualizar Índice")
-                if submitted_e2:
-                    st.success("Registro submetido e índice atualizado! (Aguardando lógica de inserção)")
+             add_record("Manual",main_option)
         elif sub_option_etapa2 == "Editar um registro":
             st.subheader("✏️ Editar Registro Existente (com Atualização de Índice)")
             st.write("Modifique um registro e tenha certeza que o índice refletirá as mudanças.")
