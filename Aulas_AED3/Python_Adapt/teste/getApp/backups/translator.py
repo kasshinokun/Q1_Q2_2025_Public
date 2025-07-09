@@ -67,7 +67,7 @@ def translate_csv(input_path, output_path):
 
 if __name__ == "__main__":
     # Configure file paths
-    input_file = r'C:\Users\Projeto Social Tiú\Videos\Convert to Python Code\python\tp\teste\getApp\backups\traffic_accidents_rev2'
+    input_file = 'traffic_accidents_rev2'
     output_file = input_file + '_translated_pt.csv'
     
     # Ensure input exists
