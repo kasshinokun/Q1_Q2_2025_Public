@@ -1,3 +1,4 @@
+# Versao 7c usando algumas implementações de 7d
 import base64
 import fnmatch
 import locale
@@ -57,7 +58,190 @@ class DataValidationError(ValueError):
 class DatabaseError(Exception):
     """Exceção personalizada para erros relacionados ao banco de dados."""
     pass
-
+# Opções de dropdown para alguns campos (Proveniente de app_v6.py para o exemplo)
+TRAFFIC_CONTROL_DEVICE_OPTIONS = [
+    'SINAL DE TRÂNSITO',
+    'SEM CONTROLES',
+    'SINAL DE PARE/LUMINOSO',
+    'DESCONHECIDO',
+    'OUTRO',
+    'PLACA DE PASSAGEM DE PEDESTRES',
+    'OUTRA PLACA DE ALERTA',
+    'DIREÇÃO DE PREFERÊNCIA',
+    'SINAL DE CONTROLE PISCANTE',
+    'MARCAÇÃO DE USO DE FAIXA',
+    'OUTRA PLACA REGISTRADA',
+    'DELINEADORES',
+    'ZONA ESCOLAR',
+    'POLÍCIA/SINALIZADOR',
+    'PROIBIDO ULTRAPASSAR',
+    'PLACA DE PASSAGEM DE TREM',
+    'PORTÃO DE CRUZAMENTO FERROVIÁRIO',
+    'PLACA DE TRAVESSIA DE BICICLETAS',
+    'OUTRO CRUZAMENTO FERROVIÁRIO'
+]
+WEATHER_CONDITION_OPTIONS = ['CLARO',
+    'CHUVA',
+    'NEVE',
+    'NUBLADO/CLARO',
+    'DESCONHECIDO',
+    'NEBLINA/FUMAÇA/NEBLINA',
+    'VENTO E NEVE',
+    'CHUVA/GAROA CONGELANTE',
+    'OUTRO',
+    'GRANHO/GRANIZO',
+    'VENTO CRUZADO FORTE',
+    'VENTO DE AREIA, SOLO, SUJEIRA'
+]
+LIGHTING_CONDITION_OPTIONS = [ 
+    'LUZ DO DIA',
+    'ESCURO, ESTRADA ILUMINADA',
+    'CREPÚSCULO',
+    'ESCURO',
+    'DESCONHECIDO',
+    'AMANHECER'
+]
+FIRST_CRASH_TYPE_OPTIONS = [
+    ' GIRO ',
+    'TRASEIRA PARA TRÁS',
+    'ÂNGULO',
+    'OBJETO FIXO',
+    'TRASEIRA PARA FRENTE',
+    'DESLIZAMENTO LATERAL NA MESMA DIREÇÃO',
+    'DESLIZAMENTO LATERAL NA DIREÇÃO OPOSTA',
+    'CICLISTA',
+    'PEDESTRE',
+    'DE FRENTE',
+    'VEÍCULO MOTORIZADO ESTACIONADO',
+    'NÃO COLISÃO COM OUTRO',
+    'VIRADO',
+    'OUTRO OBJETO',
+    'TRASEIRA PARA LADO',
+    'ANIMAL',
+    'TREM',
+    'TRASEIRA PARA TRASEIRA '
+]
+TRAFFICWAY_TYPE_OPTIONS=[
+    'NÃO DIVIDIDO',
+    'QUADRUPLICADA ',
+    'INTERSEÇÃO EM T',
+    'DIVIDIDO - COM MEDIANA (NÃO ELEVADO)  ',
+    'OUTRO',
+    'INTERSEÇÃO DESCONHECIDA TSPE',
+    'MÃO ÚNICA ',
+    'RAMPA',
+    'ROTA DE TRÁFEGO',
+    'CINCO PONTOS OU MAIS ',
+    'DIVIDIDO - COM BARREIRA MEDIANA',
+    'DESCONHECIDO',
+    'BECO',
+    'FAIXA DE CONVERSÃO CENTRAL',
+    'INTERSEÇÃO EM L',
+    'ENTRADA DE CARROS',
+    'INTERSEÇÃO EM S',
+    'ESTACIONAMENTO',
+    'ROTATÓRIA',
+    'NÃO INFORMADO'
+]
+ALIGNMENT_OPTIONS=[
+    'EM LINHA RETA E NIVELADA',
+    'CURVA E NIVELADA',
+    'EM LINHA RETA EM TOPO DE COLINA',
+    'EM LINHA RETA EM DECLIVE',
+    'CURVA EM DECLIVE',
+    'CURVA EM TOPO DE COLINA'
+]
+ROADWAY_SURFACE_COND_OPTIONS=[
+    'DESCONHECIDO',
+    'SECO',
+    'MOLHADO',
+    'NEVE OU GELO',
+    'GELO',
+    'OUTRO',
+    'AREIA, LAMA, SUJEIRA'
+]
+ROAD_DEFECT_OPTIONS=[
+    'DESCONHECIDO',
+    'SEM DEFEITOS',
+    'OUTRO',
+    'DEFEITO PRÓXIMO A ESTRADA',
+    'SUPERFÍCIE DESGASTADA',
+    'ENTULHOS NA ESTRADA',
+    'SULCOS, BURACOS'
+]
+CRASH_TYPE_OPTIONS = [
+    'SEM FERIMENTOS / DIRIGIR AFASTADO',
+    'LESÃO E/OU REBOQUE DEVIDO A ACIDENTE',
+    'COLISÃO FRONTAL',
+    'COLISÃO TRASEIRA',
+    'SAíDA DE PISTA',
+    'COLISÃO LATERAL',
+    'NÃO COLISÃO',
+    'UNKNOWN',
+    'COLISÃO',
+]
+INTERSECTION_RELATED_OPTIONS = [
+    'Y',
+    'S', 
+    'N'
+]
+DAMAGE_OPTIONS = [
+    '$501 - $1,500',
+    'ACIMA DE $1,500',
+    '$500 OU MENOS'
+]
+PRIM_CONTRIBUTORY_CAUSE_OPTIONS=[
+    'INCAPAZ DE DETERMINAR',
+    'GIRO INCORRETO/SEM SINAL ',
+    'SEGUIR MUITO DE PERTO',
+    'HABILIDADES/CONHECIMENTO/EXPERIÊNCIA DE CONDUÇÃO',
+    'MANOBRA DE RÉ INADEQUADA',
+    ' FALHAR EM DAR A DIREITA DE PASSAGEM',
+    'ULTRAPASSAR/ULTRAPASSAR INADEQUADAMENTE',
+    'CURVATURA IRREGULAR/SEM SINAL',
+    'DIRIGIR NO LADO ERRADO/ERRADO',
+    'USO INADEQUADO DA FAIXA',
+    'NÃO APLICÁVEL',
+    'NÃO REDUZIR A VELOCIDADE PARA EVITAR ACIDENTE',
+    'DESCONSIDERAR SINAL DE TRÂNSITOS',
+    'CLIMA',
+    'DESCONSIDERAR  SINAL DE PARE',
+    'EQUIPAMENTO - CONDIÇÕES DO VEÍCULO ',
+    'OPERAR O VEÍCULO DE FORMA ERRÁTICA, IMPRUDENTE, DESCUIDADA, NEGLIGENTE OU AGRESSIVA',
+    'NÃO CUMPRIMENTO DA DIREÇÃO DE PREFERÊNCIA DE DIREITO DE PASSAGEM',
+    'DESCONSIDERAR OUTRO TRAFFIC SIGNS',
+    'CONVERSÃO À DIREITA NO VERMELHO',
+    'VISÃO OBSTRUÍDA (SINAIS, GALHOS DE ÁRVORES, PRÉDIOS, ETC.)',
+    'AÇÃO EVASIVA DEVIDO A ANIMAL, OBJETO, NÃO MOTORISTA',
+    'SOB A INFLUÊNCIA DE ÁLCOOL/DROGAS (USADO QUANDO A PRISÃO FOI EFETUADA)',
+    'DISTRAÇÃO - DE FORA DO VEÍCULO',
+    'EXCEDENDO A VELOCIDADE SEGURA PARA AS CONDIÇÕES',
+    'DESRESPEITANDO AS MARCAÇÕES DA RUA',
+    'DEFEITOS DE ENGENHARIA/SUPERFÍCIE/MARCAÇÃO DE RODOVIAS',
+    'CONDIÇÕES FÍSICAS DO MOTORISTA',
+    'DISTRAÇÃO - DE DENTRO DO VEÍCULO',
+    'EXCEDENDO O LIMITE DE VELOCIDADE AUTORIZADO',
+    'CONSTRUÇÃO/MANUTENÇÃO DE ESTRADAS',
+    'DISTRAÇÃO - OUTRO DISPOSITIVO ELETRÔNICO (DISPOSITIVO DE NAVEGAÇÃO, DVD PLAYER, ETC.)',
+    'ANIMAL',
+    'TINHA INGERIDO BEBIDA (USO NÃO REALIZADO QUANDO A PRISÃO FOI FEITA)',
+    'BICICLETA AVANÇA LEGAL NO SINAL VERMELHO',
+    'USO DE CELULAR SUPERIOR A MENSAGENS DE TEXTO',
+    'RELACIONADO AO PONTO DE ÔNIBUS',
+    'MENSAGEM DE TEXTO',
+    'FAIXAS DE PEDESTRES OBSTRUÍDAS',
+    'DESCONSIDERAR SIELD SIGN',
+    'MOTOCICLETA AVANÇA LEGAL NO SINAL VERMELHO',
+    'DESCONSIDERAR O SINAL DE DIREÇÃO DE PREFERÊNCIA',
+    'PASSANDO POR ÔNIBUS ESCOLAR PARADO'
+]
+MOST_SEVERE_INJURY_OPTIONS = [
+    'SEM INDICAÇÃO DE LESÃO  ',
+    'LESÃO NÃO-INCAPACITANTE  ',
+    'LESÃO INCAPACITANTE  ',
+    'RELATADO, NÃO EVIDENTE ',
+    'FATAL'
+]
 # --- Definição dos Campos de Dados ---
 # Define todos os campos para o DataObject, seus tipos esperados e regras de validação básicas.
 # Nota: 'crash_hour', 'crash_day_of_week', 'crash_month' NÃO estão aqui porque são *derivados* da 'crash_date'
@@ -1174,55 +1358,75 @@ def add_record_v6(add_registry,save_settings):
         st.subheader("Demais Detalhes")
         cols1 = st.columns(3)
         with cols1[0]:
-            crash_type = st.text_input(
-                "Tipo de Acidente", key="crash_type" 
+            crash_type = st.selectbox(
+                "Tipo de Acidente",CRASH_TYPE_OPTIONS,index=0, key="crash_type" 
             )
             traffic_control_device = st.selectbox(
                 "Dispositivo de Controle de Tráfego",
-                ["DESCONHECIDO", "SINAL DE TRÁFEGO", "PLACA DE PARE", "PLACA DE RENDIMENTO", "NENHUM", "OUTRO"], 
+                TRAFFIC_CONTROL_DEVICE_OPTIONS,
                 index=0,
                 key="tcd"
             )
             weather_condition = st.selectbox(
                 "Condição Climática",
-                ["DESCONHECIDO", "LIMPO", "CHUVA", "NEVE", "NEBLINA", "VENTOS FORTES", "GEADA", "OUTRO"], 
+                WEATHER_CONDITION_OPTIONS, 
                 index=0,
                 key="weather"
             )
             lighting_condition = st.selectbox(
                 "Condição de Iluminação", 
-                ["DESCONHECIDO", "LUZ DO DIA", "ESCURIDÃO - ILUMINADO", "ESCURIDÃO - NÃO ILUMINADO", "CREPÚSCULO/AMANHECER"], 
+                LIGHTING_CONDITION_OPTIONS, 
                 index=0,
                 key="lighting"
             )
         with cols1[1]:
-            first_crash_type = st.text_input("Primeiro Tipo de Acidente (Específico)", key="first_crash_type") 
-            trafficway_type = st.text_input("Tipo de Via", key="trafficway_type") 
-            alignment = st.text_input("Alinhamento", key="alignment")
+            first_crash_type = st.selectbox(
+                "Primeiro Tipo de Acidente (Específico)",
+                FIRST_CRASH_TYPE_OPTIONS, 
+                index=0, 
+                key="first_crash_type") 
+            trafficway_type = st.selectbox(
+                "Tipo de Via",
+                TRAFFICWAY_TYPE_OPTIONS, 
+                index=0,  
+                key="trafficway_type") 
+            alignment = st.selectbox(
+                "Alinhamento",
+                ALIGNMENT_OPTIONS,
+                index=0, 
+                key="alignment")
             roadway_surface_cond = st.selectbox(
                 "Condição da Superfície da Via", 
-                ["DESCONHECIDO", "SECO", "MOLHADO", "NEVE/GELO", "AREIA/LAMA/SUJEIRA/ÓLEO"], 
+                ROADWAY_SURFACE_COND_OPTIONS,
                 index=0,
                 key="surface_condition"
             )
         with cols1[2]:
             road_defect = st.selectbox(
                 "Defeito na Via", 
-                ["NENHUM", "BURACOS", "DEFEITO NO ACOSTAMENTO", "DETRITOS NA VIA", "OUTRO"],
+                ROAD_DEFECT_OPTIONS,
                 index=0,
                 key="road_defect"
             )
             intersection_related_i = st.selectbox(
                 "Relacionado à Interseção?", 
-                ["NÃO", "SIM"],
+                INTERSECTION_RELATED_OPTIONS,
                 index=0,
                 key="intersection_related"
             )
-            damage = st.text_input("Descrição do Dano",  key="damage")
-            prim_contributory_cause = st.text_input("Causa Contributiva Primária", key="prim_cause")
+            damage = st.selectbox(
+                "Descrição do Dano",  
+                DAMAGE_OPTIONS,
+                index=0,
+                key="damage")
+            prim_contributory_cause = st.selectbox(
+                "Causa Contributiva Primária", 
+                PRIM_CONTRIBUTORY_CAUSE_OPTIONS,
+                index=0,
+                key="prim_cause")
             most_severe_injury = st.selectbox(
                 "Lesão Mais Severa",
-                ["NENHUMA", "FATAL", "INCAPACITANTE", "NÃO-INCAPACITANTE", "RELATADA, NÃO EVIDENTE"],
+                MOST_SEVERE_INJURY_OPTIONS,
                 index=0,
                 key="most_severe_injury"
             )
