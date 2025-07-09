@@ -1259,7 +1259,7 @@ def main():
 
     st.sidebar.markdown("---")
     st.sidebar.subheader("Informações do Sistema")
-    st.sidebar.write("Versão: 1.0_20250707 Alpha (Exclusão Lógica)")
+    st.sidebar.write("Versão: 1.0_20250708 Alpha 7c")
     st.sidebar.write("Status do DB: Online ✅") # Simplificado
 
     # Garante que as chaves RSA e AES existam ao iniciar o aplicativo
@@ -1912,7 +1912,7 @@ def main():
         * **`concurrent.futures`**: Para gerenciamento de threads e processos, permitindo operações assíncronas.
         * **`threading`**: Para controle de threads de execução.
         """)
-        st.write("Versão: 1.0_20250707 Alpha")
+        st.write("Versão: 1.0_20250708 Alpha 7c")
         st.markdown("---")
         st.info("Agradecemos seu interesse em nossa aplicação!")
 
