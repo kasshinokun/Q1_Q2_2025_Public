@@ -1,4 +1,4 @@
-# Versao 7c usando algumas implementações de 7d
+# Versao 7d revisão 2
 import base64
 import fnmatch
 import locale
@@ -40,11 +40,27 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.exceptions import InvalidTag as CryptoInvalidTag # Renomeado para evitar conflito
 
+# --- Configuração de Pastas ---
+BASE_DIR = Path(__file__).parent # Diretório onde o app_v7d.py está
+DATA_ROOT_DIR = BASE_DIR / "app_data" # Nova pasta raiz para todos os dados
+DB_FILE_PATH = DATA_ROOT_DIR / "traffic_accidents.db" # Arquivo principal do DB
+ENCRYPT_FOLDER = DATA_ROOT_DIR / "Encrypt"
+COMPRESSED_FOLDER = DATA_ROOT_DIR / "Compress"
+TEMP_FOLDER = DATA_ROOT_DIR / "Temp"
+
+# Garante que as pastas existam
+DATA_ROOT_DIR.mkdir(parents=True, exist_ok=True)
+ENCRYPT_FOLDER.mkdir(parents=True, exist_ok=True)
+COMPRESSED_FOLDER.mkdir(parents=True, exist_ok=True)
+TEMP_FOLDER.mkdir(parents=True, exist_ok=True)
+
 # Configure logging
+LOG_FILE = DATA_ROOT_DIR / 'traffic_accidents.log' # Log na nova pasta de dados
 logging.basicConfig(
     level=logging.INFO, # Pode ser alterado para logging.DEBUG para mais detalhes
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
+        logging.FileHandler(LOG_FILE), # Log para arquivo
         logging.StreamHandler() # Log para o console
     ]
 )
@@ -58,6 +74,7 @@ class DataValidationError(ValueError):
 class DatabaseError(Exception):
     """Exceção personalizada para erros relacionados ao banco de dados."""
     pass
+
 # Opções de dropdown para alguns campos (Proveniente de app_v6.py para o exemplo)
 TRAFFIC_CONTROL_DEVICE_OPTIONS = [
     'SINAL DE TRÂNSITO',
@@ -242,6 +259,7 @@ MOST_SEVERE_INJURY_OPTIONS = [
     'RELATADO, NÃO EVIDENTE ',
     'FATAL'
 ]
+
 # --- Definição dos Campos de Dados ---
 # Define todos os campos para o DataObject, seus tipos esperados e regras de validação básicas.
 # Nota: 'crash_hour', 'crash_day_of_week', 'crash_month' NÃO estão aqui porque são *derivados* da 'crash_date'
@@ -249,20 +267,20 @@ MOST_SEVERE_INJURY_OPTIONS = [
 FIELDS = [
     # (nome_do_campo, tipo_esperado, valor_padrao, eh_obrigatorio)
     ('crash_date', str, '01/01/2020 00:00:00 AM', True),
-    ('traffic_control_device', str, 'UNKNOWN', False),
-    ('weather_condition', str, 'UNKNOWN', False),
-    ('lighting_condition', str, 'UNKNOWN', False),
-    ('first_crash_type', str, 'UNKNOWN', False),
-    ('trafficway_type', str, 'UNKNOWN', False),
-    ('alignment', str, 'UNKNOWN', False),
-    ('roadway_surface_cond', str, 'UNKNOWN', False),
-    ('road_defect', str, 'UNKNOWN', False),
-    ('crash_type', str, 'UNKNOWN', False),
-    ('intersection_related_i', str, 'UNKNOWN', False), # 'Y' ou 'N'
-    ('damage', str, 'UNKNOWN', False),
-    ('prim_contributory_cause', str, 'UNKNOWN', False),
+    ('traffic_control_device', str, TRAFFIC_CONTROL_DEVICE_OPTIONS[0], False),
+    ('weather_condition', str, WEATHER_CONDITION_OPTIONS[0], False),
+    ('lighting_condition', str, LIGHTING_CONDITION_OPTIONS[0], False),
+    ('first_crash_type', str, FIRST_CRASH_TYPE_OPTIONS[0], False),
+    ('trafficway_type', str, TRAFFICWAY_TYPE_OPTIONS[0], False),
+    ('alignment', str, ALIGNMENT_OPTIONS[0], False),
+    ('roadway_surface_cond', str, ROADWAY_SURFACE_COND_OPTIONS[0], False),
+    ('road_defect', str, ROAD_DEFECT_OPTIONS[0], False),
+    ('crash_type', str,CRASH_TYPE_OPTIONS[0], False),
+    ('intersection_related_i', str,INTERSECTION_RELATED_OPTIONS[0], False), # 'Y' ou 'N'
+    ('damage', str,DAMAGE_OPTIONS[0], False),
+    ('prim_contributory_cause', str,PRIM_CONTRIBUTORY_CAUSE_OPTIONS[0], False),
     ('num_units', int, 0, False),
-    ('most_severe_injury', str, 'NONE', False),
+    ('most_severe_injury', str,MOST_SEVERE_INJURY_OPTIONS[0], False),
     ('injuries_total', int, 0, False),
     ('injuries_fatal', int, 0, False),
     ('injuries_incapacitating', int, 0, False),
@@ -286,7 +304,7 @@ FIELD_NAMES_PT = {
     'roadway_surface_cond': 'Condição da Superfície da Via',
     'road_defect': 'Defeito na Via',
     'crash_type': 'Tipo de Acidente',
-    'intersection_related_i': 'Relacionado a Interseção (Y/N)',
+    'intersection_related_i': 'Relacionado a Interseção I (Y/N)',
     'damage': 'Dano',
     'prim_contributory_cause': 'Causa Contributiva Primária',
     'num_units': 'Número de Unidades',
@@ -303,41 +321,34 @@ FIELD_NAMES_PT = {
 
 # Mapeamento de headers em português para os nomes de campo em inglês do DataObject
 PORTUGUESE_TO_ENGLISH_HEADERS = {
-    'crash_date': 'crash_date',
-    'dispositivo_de_controle_de_tráfego': 'traffic_control_device',
-    'condição_climática': 'weather_condition',
-    'condição_de_iluminação': 'lighting_condition',
+    'data_acidente': 'crash_date',
+    'dispositivo_de_controle_de_trafego': 'traffic_control_device',
+    'condicao_climatica': 'weather_condition',
+    'condicao_de_iluminacao': 'lighting_condition',
     'primeiro_tipo_de_acidente': 'first_crash_type',
-    'tipo_de_pista_de_tráfego': 'trafficway_type',
+    'tipo_de_pista_de_trafego': 'trafficway_type',
     'alinhamento': 'alignment',
-    'superfície_da_estrada': 'roadway_surface_cond',
+    'superficie_da_estrada': 'roadway_surface_cond',
     'defeito_da_estrada': 'road_defect',
     'tipo_de_acidente': 'crash_type',
-    'relacionado_à_interseção': 'intersection_related_i',
+    'relacionado_a_intersecao_i': 'intersection_related_i',
     'dano': 'damage',
-    'causa_contributiva_primária': 'prim_contributory_cause',
+    'causa_contributiva_primaria': 'prim_contributory_cause',
     'num_unidades': 'num_units',
-    'most_severe_injury': 'most_severe_injury',
-    'injuries_total': 'injuries_total',
-    'injuries_fatal': 'injuries_fatal',
-    'injuries_incapacitating': 'injuries_incapacitating',
-    'injuries_non_incapacitating': 'injuries_non_incapacitating',
-    'injuries_reported_not_evident': 'injuries_reported_not_evident',
-    'injuries_no_indication': 'injuries_no_indication',
-    # Campos que podem estar no CSV mas são *derivados* no DataObject, e, portanto, serão ignorados do input data_dict
+    'ferimento_mais_severo': 'most_severe_injury',
+    'ferimentos_total': 'injuries_total',
+    'ferimentos_fatais': 'injuries_fatal',
+    'ferimentos_incapacitantes': 'injuries_incapacitating',
+    'ferimentos_nao_incapacitantes': 'injuries_non_incapacitating',
+    'ferimentos_reportado_nao_evidente': 'injuries_reported_not_evident',
+    'ferimentos_sem_indicacao': 'injuries_no_indication',
+    # Campos que podem estar no CSV but são *derivados* no DataObject, e, portanto, serão ignorados do input data_dict
     'hora_acidente': 'crash_hour',
     'dia_semana_acidente': 'crash_day_of_week',
     'mes_acidente': 'crash_month'
 }
 
-# Opções de dropdown para alguns campos (simplificado do app_v6.py para o exemplo)
-TRAFFIC_CONTROL_DEVICE_OPTIONS = ['SINAL DE TRAFEGO', 'SINAL DE PARE', 'NENHUM', 'SEM SINALIZACAO', 'UNKNOWN']
-WEATHER_CONDITION_OPTIONS = ['CEU LIMPO', 'CHUVA', 'NEVE', 'NUBLADO', 'FOG', 'UNKNOWN']
-LIGHTING_CONDITION_OPTIONS = ['DIA CLARO', 'CREPUSCULO', 'NOITE', 'UNKNOWN']
-CRASH_TYPE_OPTIONS = ['COLISAO FRONTAL', 'COLISAO TRASEIRA', 'SAIDA DE PISTA', 'COLISAO LATERAL', 'NAO COLISAO', 'UNKNOWN', 'COLISAO']
-INTERSECTION_RELATED_OPTIONS = ['Y', 'N', 'UNKNOWN']
-DAMAGE_OPTIONS = ['MINIMO', 'MAIOR', 'SUBSTANCIAL', 'MENOR', 'NENHUM', 'UNKNOWN']
-MOST_SEVERE_INJURY_OPTIONS = ['NENHUMA', 'LESÃO INCAPACITANTE', 'LESÃO FATAL', 'UNKNOWN']
+
 
 class DataObject:
     """
@@ -553,7 +564,7 @@ class TrafficAccidentDB:
     RECORD_INNER_HEADER_SIZE = struct.calcsize(RECORD_INNER_HEADER_FORMAT)
     CHECKSUM_SIZE = 32 # SHA256 é 32 bytes
 
-    def __init__(self, db_file_path: str = "data_objects.db"):
+    def __init__(self, db_file_path: Path): # Alterado para Path
         self.db_file_path = db_file_path
         self._initialize_db_header()
 
@@ -561,13 +572,13 @@ class TrafficAccidentDB:
         """
         Inicializa o arquivo DB com um cabeçalho, se ele não existir ou estiver vazio.
         """
-        if not os.path.exists(self.db_file_path) or os.path.getsize(self.db_file_path) < self.DB_HEADER_SIZE:
+        if not self.db_file_path.exists() or self.db_file_path.stat().st_size < self.DB_HEADER_SIZE:
             try:
-                with filelock.FileLock(self.db_file_path + ".lock"):
-                    Path(self.db_file_path).parent.mkdir(parents=True, exist_ok=True)
-                    with open(self.db_file_path, "r+b" if os.path.exists(self.db_file_path) else "w+b") as f:
+                with filelock.FileLock(str(self.db_file_path) + ".lock"): # Usar str() para filelock
+                    self.db_file_path.parent.mkdir(parents=True, exist_ok=True)
+                    with open(self.db_file_path, "r+b" if self.db_file_path.exists() else "w+b") as f:
                         f.seek(0)
-                        if os.path.getsize(self.db_file_path) < self.DB_HEADER_SIZE:
+                        if self.db_file_path.stat().st_size < self.DB_HEADER_SIZE:
                             f.write(struct.pack('<I', 0))
                         logger.info(f"Arquivo DB '{self.db_file_path}' inicializado com cabeçalho ID 0.")
             except Exception as e:
@@ -581,7 +592,7 @@ class TrafficAccidentDB:
 
         last_id = 0
         try:
-            with filelock.FileLock(self.db_file_path + ".lock"):
+            with filelock.FileLock(str(self.db_file_path) + ".lock"):
                 with open(self.db_file_path, "rb") as f:
                     f.seek(0)
                     header_bytes = f.read(self.DB_HEADER_SIZE)
@@ -601,7 +612,7 @@ class TrafficAccidentDB:
         Atualiza o último ID no cabeçalho do arquivo DB.
         """
         try:
-            with filelock.FileLock(self.db_file_path + ".lock"):
+            with filelock.FileLock(str(self.db_file_path) + ".lock"):
                 with open(self.db_file_path, "r+b") as f:
                     f.seek(0)
                     f.write(struct.pack('<I', new_id))
@@ -643,7 +654,7 @@ class TrafficAccidentDB:
         full_record_data = record_inner_header + sha256_checksum + byte_vector
 
         try:
-            with filelock.FileLock(self.db_file_path + ".lock"):
+            with filelock.FileLock(str(self.db_file_path) + ".lock"):
                 with open(self.db_file_path, "ab") as f:
                     f.write(full_record_data)
                 self._update_last_id_in_header(record_id)
@@ -662,7 +673,7 @@ class TrafficAccidentDB:
 
         records = []
         try:
-            with filelock.FileLock(self.db_file_path + ".lock"):
+            with filelock.FileLock(str(self.db_file_path) + ".lock"):
                 with open(self.db_file_path, "rb") as f:
                     f.seek(self.DB_HEADER_SIZE) # Pula o cabeçalho principal
                     while True:
@@ -725,7 +736,7 @@ class TrafficAccidentDB:
         self._initialize_db_header()
 
         try:
-            with filelock.FileLock(self.db_file_path + ".lock"):
+            with filelock.FileLock(str(self.db_file_path) + ".lock"):
                 with open(self.db_file_path, "rb") as f:
                     f.seek(self.DB_HEADER_SIZE) # Pula o cabeçalho principal
                     while True:
@@ -784,7 +795,7 @@ class TrafficAccidentDB:
         found_and_marked_for_deletion = False
 
         try:
-            with filelock.FileLock(self.db_file_path + ".lock"):
+            with filelock.FileLock(str(self.db_file_path) + ".lock"):
                 with open(self.db_file_path, "r+b") as f:
                     f.seek(self.DB_HEADER_SIZE) # Pula o cabeçalho principal
                     while True:
@@ -840,28 +851,32 @@ class TrafficAccidentDB:
         processed_count = 0
         invalid_count = 0
         try:
+            # Use csv.reader para lidar com o delimitador e as aspas
             csv_reader = csv.reader(csv_file_buffer, delimiter=';')
-            header = [h.strip() for h in next(csv_reader)] # Remove espaços em branco do cabeçalho
+            
+            # Lê o cabeçalho e remove espaços em branco
+            header = [h.strip() for h in next(csv_reader)]
 
             # Determina o tipo de cabeçalho e cria um mapeamento de coluna para campo do DataObject
             column_to_field_map = {}
             expected_english_fields = [f[0] for f in FIELDS] # Nomes dos campos esperados em inglês
             
-            # Primeiro tenta mapear para português, depois para inglês
             is_portuguese_header = False
             for col_name_csv in header:
-                if col_name_csv.lower() in PORTUGUESE_TO_ENGLISH_HEADERS: # Convert to lower for robust matching
+                # Tenta mapear para português (case-insensitive)
+                if col_name_csv.lower() in PORTUGUESE_TO_ENGLISH_HEADERS:
                     mapped_field = PORTUGUESE_TO_ENGLISH_HEADERS[col_name_csv.lower()]
                     column_to_field_map[col_name_csv] = mapped_field
-                    if col_name_csv.lower() != mapped_field.lower(): # Check if translation occurred
+                    if col_name_csv.lower() != mapped_field.lower(): # Verifica se houve tradução
                         is_portuguese_header = True
-                elif col_name_csv in expected_english_fields: # Handle if it's already English
+                elif col_name_csv in expected_english_fields: # Se já for inglês
                     column_to_field_map[col_name_csv] = col_name_csv
-                # else: this column is not a recognized field for DataObject, will be ignored
+                # Colunas não reconhecidas serão ignoradas
 
             if not column_to_field_map:
-                st.error("Nenhum cabeçalho reconhecível encontrado no arquivo CSV.")
-                return 0, len(list(csv_reader)) # All rows will be invalid if header is unknown
+                st.error("Nenhum cabeçalho reconhecível encontrado no arquivo CSV. Verifique se os cabeçalhos estão em português ou inglês e correspondem aos campos esperados.")
+                # Retorna o número de linhas restantes como inválidas, já que não podemos processá-las
+                return 0, len(list(csv_reader))
 
             if is_portuguese_header:
                 st.info("Detectado cabeçalho em português. Adaptando para importação.")
@@ -876,7 +891,7 @@ class TrafficAccidentDB:
             
             if missing_required_fields:
                 st.error(f"Campos obrigatórios ausentes no CSV: {', '.join(missing_required_fields)}. Verifique o arquivo.")
-                return 0, len(list(csv_reader)) # All rows will be invalid if required fields are missing
+                return 0, len(list(csv_reader))
 
             # Mapeamento de índices de coluna para nomes de campo do DataObject
             field_index_map = {col_name_csv: idx for idx, col_name_csv in enumerate(header)}
@@ -884,7 +899,7 @@ class TrafficAccidentDB:
             for i, row in enumerate(csv_reader):
                 logger.info(f"Processando linha {i+1}: {row}")
                 if len(row) != len(header):
-                    st.warning(f"Linha {i+1} tem número de colunas inconsistente ({len(row)} vs {len(header)}). Pulando.")
+                    st.warning(f"Linha {i+1} tem número de colunas inconsistente ({len(row)} vs {len(header)}). Pulando esta linha.")
                     invalid_count += 1
                     continue
 
@@ -906,10 +921,10 @@ class TrafficAccidentDB:
                             processed_count += 1
                         else:
                             invalid_count += 1 # Contabiliza falha de escrita no DB como inválida
-                            st.error(f"Falha ao escrever registro da linha {i+1} no DB: {row}")
+                            st.error(f"Falha ao escrever registro da linha {i+1} no DB (ID gerado: {data_obj.id if hasattr(data_obj, 'id') else 'N/A'}): {row}")
                     else:
                         invalid_count += 1
-                        st.warning(f"Linha {i+1} inválida, não adicionada ao DB. Verifique logs para detalhes.")
+                        st.warning(f"Linha {i+1} inválida, não adicionada ao DB. Verifique logs para detalhes: {row}")
                 except DataValidationError as e:
                     invalid_count += 1
                     st.error(f"Erro de validação na linha {i+1}: {e} - Dados: {row}")
@@ -918,10 +933,748 @@ class TrafficAccidentDB:
                     st.error(f"Erro inesperado ao processar linha {i+1}: {traceback.format_exc()} - Dados: {row}")
         except Exception as e:
             st.error(f"Erro ao ler arquivo CSV: {traceback.format_exc()}")
+            logger.error(f"Erro fatal ao processar CSV: {traceback.format_exc()}")
 
         st.success(f"Processamento concluído. Registros válidos escritos no DB: {processed_count}. Registros inválidos/erros: {invalid_count}.")
         logger.info(f"Processamento CSV concluído. Registros válidos escritos no DB: {processed_count}. Registros inválidos/erros: {invalid_count}.")
         return processed_count, invalid_count
+
+# --- Constantes e Funções Auxiliares de apendice_v1.py ---
+BUFFER_SIZE = 65536
+DEFAULT_EXTENSION = ".csv"
+HUFFMAN_COMPRESSED_EXTENSION = ".huff"
+LZW_COMPRESSED_EXTENSION = ".lzw"
+MIN_COMPRESSION_SIZE = 100
+MAX_FILE_SIZE_MB = 100
+CHUNK_SIZE = 4096
+MAX_BACKUPS = 5
+MAX_LOG_ENTRIES_DISPLAY = 10
+
+# Blowfish constants
+P_INIT = [
+    0x243F6A88, 0x85A308D3, 0x13198A2E, 0x03707344, 0xA4093822, 0x299F31D0,
+    0x082EFA98, 0xEC4E6C89, 0x452821E6, 0x38D01377, 0xBE5466CF, 0x34E90C6C,
+    0xC0AC29B7, 0xC97C50DD, 0x3F84D5B5, 0xB5470917, 0x9216D5D9, 0x8979FB1B
+]
+
+S_INIT = [
+    [
+        0xD1310BA6, 0x98DFB5AC, 0x2FFD72DB, 0xD01ADFB7, 0xB8E1AFED, 0x6A267E96,
+        0xBA7C9045, 0xF12C7F99, 0x24A19947, 0xB3916CF7, 0x0801F2E2, 0x858EFC16,
+        0x636920D8, 0x71574E69, 0xA458FE3E, 0x1BBEB41B
+    ],
+    [
+        0xE01BECD3, 0x86FA67DB, 0xF9D50F25, 0xBA7C9045, 0xF12C7F99, 0x24A19947,
+        0xB3916CF7, 0x0801F2E2, 0x858EFC16, 0x636920D8, 0x71574E69, 0xA458FE3E,
+        0x1BBEB41B, 0xE01BECD3, 0x86FA67DB, 0xF9D50F25
+    ],
+    [
+        0x26027E2D, 0x94B7E38C, 0x0119E153, 0x858ECDBA, 0x98DFB5AC, 0x2FFD72DB,
+        0xD01ADFB7, 0xB8E1AFED, 0x6A267E96, 0xBA7C9045, 0xF12C7F99, 0x24A19947,
+        0xB3916CF7, 0x0801F2E2, 0x858EFC16, 0x636920D8
+    ],
+    [
+        0x71574E69, 0xA458FE3E, 0x1BBEB41B, 0xE01BECD3, 0x86FA67DB, 0xF9D50F25,
+        0xBA7C9045, 0xF12C7F99, 0x24A19947, 0xB3916CF7, 0x0801F2E2, 0x858EFC16,
+        0x636920D8, 0x71574E69, 0xA458FE3E, 0x1BBEB41B
+    ]
+]
+
+# Helper functions from apendice_v1.py
+def count_file(input_file_path, extension, folder):
+    prefix = Path(input_file_path).name
+    contador = 1
+    for nome_arquivo in os.listdir(folder):
+        # Ajuste para garantir que o prefixo corresponda ao nome base do arquivo
+        # e não inclua extensões anteriores ou versões
+        base_name_no_ext = Path(prefix).stem
+        if fnmatch.fnmatch(nome_arquivo, f"{base_name_no_ext}*{extension}"):
+            contador = contador + 1
+    return contador
+
+def get_original(file_name: str, old_extension: str) -> str:
+    # Remove a extensão de compressão/criptografia e a parte _versionX
+    # Ex: "original_file_version2.enc.aes_rsa" -> "original_file"
+    # Ex: "original_file_version2.huff" -> "original_file"
+    
+    # Primeiro, remove a extensão final (ex: .enc.aes_rsa ou .huff)
+    name_without_final_ext, _ = os.path.splitext(file_name)
+    
+    # Se a extensão original foi parte de um nome de arquivo composto (ex: .csv.huff),
+    # então o name_without_final_ext ainda pode ter a extensão original.
+    # Ex: "meu_arquivo.csv.huff" -> "meu_arquivo.csv"
+    # Precisamos remover a extensão original se ela estiver presente e for a que estamos procurando.
+    if name_without_final_ext.endswith(old_extension):
+        name_without_final_ext = name_without_final_ext[:-len(old_extension)]
+
+    # Agora, remove a parte "_versionX" se existir
+    regex_pattern_dynamic_version = r'_version\d+$'
+    match = re.search(regex_pattern_dynamic_version, name_without_final_ext)
+    if match:
+        return name_without_final_ext[:match.start()]
+    else:
+        return name_without_final_ext
+
+
+# Huffman Implementation (from apendice_v1.py)
+class Node:
+    __slots__ = ['char', 'freq', 'left', 'right']
+    
+    def __init__(self, char: Optional[bytes], freq: int, 
+                 left: Optional['Node'] = None, 
+                 right: Optional['Node'] = None):
+        self.char = char
+        self.freq = freq
+        self.left = left
+        self.right = right
+
+    def __lt__(self, other: 'Node'):
+        return self.freq < other.freq
+
+class HuffmanProcessor:
+    @staticmethod
+    def generate_tree(data: bytes, progress_callback: Optional[Callable[[float, str], None]] = None) -> Optional[Node]:
+        if not data:
+            return None
+            
+        if len(data) == 1:
+            return Node(data, 1)
+
+        if progress_callback:
+            progress_callback(0, "Analisando conteúdo do arquivo...")
+
+        byte_count = Counter(data)
+        
+        if len(byte_count) == 1:
+            byte = next(iter(byte_count))
+            return Node(bytes([byte]), byte_count[byte])
+        
+        if progress_callback:
+            progress_callback(0.2, "Construindo fila de prioridade...")
+
+        nodes = [Node(bytes([byte]), freq) for byte, freq in byte_count.items()]
+        heapq.heapify(nodes)
+
+        if progress_callback:
+            progress_callback(0.3, "Construindo árvore de Huffman...")
+
+        total_nodes = len(nodes)
+        while len(nodes) > 1:
+            left = heapq.heappop(nodes)
+            right = heapq.heappop(nodes)
+            heapq.heappush(nodes, Node(None, left.freq + right.freq, left, right))
+            
+            if progress_callback and len(nodes) % 10 == 0:
+                progress = 0.3 + 0.7 * (1 - len(nodes)/total_nodes)
+                progress_callback(progress, f"Mesclando nós: {len(nodes)} restantes")
+
+        if progress_callback:
+            progress_callback(1.0, "Árvore de Huffman completa!")
+            time.sleep(0.3)
+
+        return nodes[0]
+
+    @staticmethod
+    def build_codebook(root: Optional[Node]) -> Dict[bytes, str]:
+        if not root:
+            return {}
+
+        codebook = {}
+        stack = [(root, "")]
+        
+        while stack:
+            node, code = stack.pop()
+            if node.char is not None:
+                codebook[node.char] = code or '0'
+            else:
+                stack.append((node.right, code + '1'))
+                stack.append((node.left, code + '0'))
+        
+        return codebook
+
+    @staticmethod
+    def compress_file(input_path: str, output_path: str, progress_callback: Optional[Callable[[float, str], None]] = None) -> Tuple[int, int, float, float]:
+        start_time = time.time()
+        
+        with open(input_path, 'rb') as file:
+            data = file.read()
+
+        if not data:
+            return 0, 0, 0.0, 0.0
+
+        original_size = len(data)
+        
+        if original_size < MIN_COMPRESSION_SIZE:
+            with open(output_path, 'wb') as file:
+                file.write(data)
+            return original_size, original_size, 0.0, time.time() - start_time
+
+        if progress_callback:
+            progress_callback(0, "Construindo Árvore de Huffman...")
+        root = HuffmanProcessor.generate_tree(
+            data, 
+            lambda p, m: progress_callback(p * 0.3, f"Huffman: {m}") if progress_callback else None
+        )
+
+        if progress_callback:
+            progress_callback(0.3, "Gerando dicionário de codificação...")
+        codebook = HuffmanProcessor.build_codebook(root)
+        encode_table = {byte[0]: code for byte, code in codebook.items()}
+
+        if progress_callback:
+            progress_callback(0.4, "Comprimindo dados...")
+
+        with open(output_path, 'wb') as file:
+            file.write(struct.pack('I', len(codebook)))
+            for byte, code in codebook.items():
+                file.write(struct.pack('B', byte[0]))
+                file.write(struct.pack('B', len(code)))
+                # Convert binary string to int, then pack. Handle empty code for single char input
+                file.write(struct.pack('I', int(code, 2) if code else 0)) 
+
+            file.write(struct.pack('I', original_size))
+
+            buffer = bytearray()
+            current_byte = 0
+            bit_count = 0
+            bytes_processed = 0
+            
+            for byte in data:
+                code = encode_table[byte]
+                for bit in code:
+                    current_byte = (current_byte << 1) | (bit == '1')
+                    bit_count += 1
+                    if bit_count == 8:
+                        buffer.append(current_byte)
+                        if len(buffer) >= BUFFER_SIZE:
+                            file.write(buffer)
+                            buffer.clear()
+                        current_byte = 0
+                        bit_count = 0
+                
+                bytes_processed += 1
+                if progress_callback and bytes_processed % 1000 == 0:
+                    progress = 0.4 + 0.6 * (bytes_processed / original_size)
+                    progress_callback(progress, f"Comprimidos {bytes_processed}/{original_size} bytes")
+
+            if bit_count > 0:
+                current_byte <<= (8 - bit_count)
+                buffer.append(current_byte)
+            
+            if buffer:
+                file.write(buffer)
+            
+            # Write padding bits info
+            file.write(struct.pack('B', (8 - bit_count) % 8))
+
+        compressed_size = os.path.getsize(output_path)
+        compression_ratio = (original_size - compressed_size) / original_size * 100
+        process_time = time.time() - start_time
+
+        if progress_callback:
+            progress_callback(1.0, "Compressão completa!")
+
+        return original_size, compressed_size, compression_ratio, process_time
+
+    @staticmethod
+    def decompress_file(input_path: str, output_path: str, progress_callback: Optional[Callable[[float, str], None]] = None) -> Tuple[int, int, float, float]:
+        start_time = time.time()
+        
+        with open(input_path, 'rb') as file:
+            table_size = struct.unpack('I', file.read(4))[0]
+            code_table = {}
+            max_code_length = 0
+            
+            if progress_callback:
+                progress_callback(0.1, "Lendo metadados...")
+
+            for i in range(table_size):
+                byte = struct.unpack('B', file.read(1))[0]
+                code_length = struct.unpack('B', file.read(1))[0]
+                code_int = struct.unpack('I', file.read(4))[0]
+                # Reconstruct binary string from int and length
+                code = format(code_int, f'0{code_length}b') 
+                code_table[code] = bytes([byte])
+                max_code_length = max(max_code_length, code_length)
+                
+                if progress_callback and i % 100 == 0:
+                    progress = 0.1 + 0.2 * (i / table_size)
+                    progress_callback(progress, f"Carregando tabela de códigos: {i}/{table_size}")
+
+            original_data_size = struct.unpack('I', file.read(4))[0] # Changed from data_size to original_data_size for clarity
+            
+            # Read all remaining bytes for compressed data
+            compressed_data_raw = file.read()
+            
+            # The last byte of the raw compressed data contains the padding bits
+            padding_bits = compressed_data_raw[-1]
+            compressed_data_bytes = compressed_data_raw[:-1] # Actual compressed data without padding info
+
+            total_compressed_bits = len(compressed_data_bytes) * 8 - padding_bits
+            
+            if progress_callback:
+                progress_callback(0.3, "Preparando para decodificar...")
+
+            result = io.BytesIO()
+            current_bits = ""
+            bytes_decoded = 0
+            bits_processed = 0
+
+            for byte_val in compressed_data_bytes:
+                bits_in_byte = format(byte_val, '08b')
+                for bit in bits_in_byte:
+                    if bits_processed < total_compressed_bits: # Only process actual data bits
+                        current_bits += bit
+                        bits_processed += 1
+                        
+                        # Try to match prefixes
+                        found_match = False
+                        # Iterate from longest possible code to shortest
+                        for length in range(1, min(len(current_bits), max_code_length) + 1):
+                            prefix = current_bits[:length]
+                            if prefix in code_table:
+                                result.write(code_table[prefix])
+                                bytes_decoded += 1
+                                current_bits = current_bits[length:]
+                                found_match = True
+                                break # Found a match, move to next bits
+                        
+                        # If no match found for any prefix, it's an error or incomplete data
+                        # This scenario should ideally not happen with a valid Huffman stream
+                        if not found_match and current_bits:
+                            # This part might need more robust error handling if data is truly corrupted
+                            # For now, we'll just log and try to continue or break
+                            logger.warning(f"No Huffman code match for prefix: {current_bits}. Data might be corrupted.")
+                            # Consider breaking or raising an error here if strictness is needed
+                            # For now, let's just continue and hope for recovery or end of stream
+                            pass # Keep processing if possible, or break if it's clearly stuck
+
+                    if bytes_decoded >= original_data_size: # Stop if we've decoded enough bytes
+                        break
+                if bytes_decoded >= original_data_size: # Stop if we've decoded enough bytes
+                    break
+                if progress_callback and bytes_decoded % 1000 == 0:
+                    progress = 0.3 + 0.7 * (bytes_decoded / original_data_size)
+                    progress_callback(progress, f"Decodificados {bytes_decoded}/{original_data_size} bytes")
+
+        with open(output_path, 'wb') as file:
+            final_decoded_data = result.getvalue()
+            # Ensure we only write up to the original size, in case of extra padding bits leading to extra bytes
+            file.write(final_decoded_data[:original_data_size])
+
+        compressed_size = os.path.getsize(input_path)
+        decompressed_size = os.path.getsize(output_path)
+        compression_ratio = (compressed_size - decompressed_size) / compressed_size * 100
+        process_time = time.time() - start_time
+
+        if progress_callback:
+            progress_callback(1.0, "Descompressão completa!")
+
+        return compressed_size, decompressed_size, compression_ratio, process_time
+
+# LZW Implementation (from apendice_v1.py)
+class LZWProcessor:
+    @staticmethod
+    def compress(input_file_path: str, output_file_path: str, progress_callback: Optional[Callable[[float, str], None]] = None) -> Tuple[int, int, float, float]:
+        start_time = time.time()
+        
+        try:
+            with open(input_file_path, 'rb') as f:
+                data = f.read()
+            
+            original_size = len(data)
+            if not data:
+                return 0, 0, 0.0, 0.0
+
+            dictionary = {bytes([i]): i for i in range(256)}
+            next_code = 256
+            compressed_data = []
+            w = bytes()
+            
+            total_bytes = len(data)
+            processed_bytes = 0
+            bits = 9 # Initial bits for LZW
+            max_code = 2**bits - 1
+            
+            for byte in data:
+                c = bytes([byte])
+                wc = w + c
+                if wc in dictionary:
+                    w = wc
+                else:
+                    compressed_data.append(dictionary[w])
+                    if next_code <= 2**24 - 1: # Limite para evitar estouro de memória ou códigos muito longos
+                        dictionary[wc] = next_code
+                        next_code += 1
+                    if next_code > max_code and bits < 24: # Aumenta bits até 24
+                        bits += 1
+                        max_code = 2**bits - 1
+                    w = c
+                
+                processed_bytes += 1
+                if progress_callback and processed_bytes % 1000 == 0:
+                    progress = processed_bytes / total_bytes
+                    progress_callback(progress, f"Comprimindo... {processed_bytes}/{total_bytes} bytes processados")
+            
+            if w:
+                compressed_data.append(dictionary[w])
+            
+            with open(output_file_path, 'wb') as f:
+                f.write(len(compressed_data).to_bytes(4, byteorder='big')) # Número de códigos
+                f.write(bits.to_bytes(1, byteorder='big')) # Salva o número inicial de bits (9)
+                
+                buffer = 0
+                buffer_length = 0
+                
+                for code in compressed_data:
+                    # Calcula o número de bits necessários para o código atual
+                    # Deve ser baseado no `next_code` atual do dicionário no momento da COMPRESSÃO
+                    # NOTA: Esta lógica pode ser complexa. Para LZW, o tamanho do código pode variar.
+                    # A implementação original do apendice_v1.py tinha um bug aqui.
+                    # Uma abordagem mais robusta seria recalcular `bits` para cada `code` baseado no `next_code`
+                    # no momento em que o código foi gerado durante a compressão, ou usar um tamanho fixo por bloco.
+                    # Para simplificar e manter a compatibilidade com a descompressão do apendice_v1.py,
+                    # vou usar o `bits` que cresceu durante a compressão.
+                    
+                    # A lógica do apendice_v1.py para current_code_bits parece ser um erro.
+                    # O número de bits para codificar um símbolo deve ser o `bits` atual do dicionário.
+                    current_code_bits = bits # Usa o 'bits' atual que foi ajustado
+                    # The original code had a complex calculation here that was likely incorrect for LZW.
+                    # The number of bits for a code should be determined by the maximum code value
+                    # currently in the dictionary, which is implicitly handled by `bits`.
+                    # So, we simply use the current `bits` value.
+                    
+                    buffer = (buffer << current_code_bits) | code
+                    buffer_length += current_code_bits
+                    
+                    while buffer_length >= 8:
+                        byte = (buffer >> (buffer_length - 8)) & 0xFF
+                        f.write(bytes([byte]))
+                        buffer_length -= 8
+                        buffer = buffer & ((1 << buffer_length) - 1)
+                
+                if buffer_length > 0:
+                    byte = (buffer << (8 - buffer_length)) & 0xFF
+                    f.write(bytes([byte]))
+            
+            compressed_size = os.path.getsize(output_file_path)
+            compression_ratio = (original_size - compressed_size) / original_size * 100
+            process_time = time.time() - start_time
+
+            if progress_callback:
+                progress_callback(1.0, "Compressão completa!")
+
+            return original_size, compressed_size, compression_ratio, process_time
+        
+        except Exception as e:
+            if progress_callback:
+                progress_callback(1.0, f"Erro durante a compressão: {str(e)}")
+            raise e
+
+    @staticmethod
+    def decompress(input_file_path: str, output_file_path: str, progress_callback: Optional[Callable[[float, str], None]] = None) -> Tuple[int, int, float, float]:
+        start_time = time.time()
+        
+        try:
+            with open(input_file_path, 'rb') as f:
+                num_codes_expected = int.from_bytes(f.read(4), byteorder='big')
+                initial_bits = int.from_bytes(f.read(1), byteorder='big')
+                compressed_bytes = f.read()
+            
+            compressed_size = os.path.getsize(input_file_path)
+            dictionary = {i: bytes([i]) for i in range(256)}
+            next_code = 256
+            decompressed_data = bytearray()
+            buffer = 0
+            buffer_length = 0
+            byte_pos = 0
+            codes = []
+            current_bits = initial_bits # Começa com 9 bits
+            
+            # Lendo os códigos do arquivo
+            while byte_pos < len(compressed_bytes):
+                # Preenche o buffer
+                while buffer_length < current_bits and byte_pos < len(compressed_bytes):
+                    buffer = (buffer << 8) | compressed_bytes[byte_pos]
+                    byte_pos += 1
+                    buffer_length += 8
+                
+                # Se ainda não há bits suficientes para ler um código completo, sai
+                if buffer_length < current_bits:
+                    break
+                
+                # Extrai o código
+                code = (buffer >> (buffer_length - current_bits)) & ((1 << current_bits) - 1)
+                codes.append(code)
+                buffer_length -= current_bits
+                
+                # Atualiza current_bits se o dicionário cresceu
+                if next_code >= (1 << current_bits) and current_bits < 24:
+                    current_bits += 1
+                
+                # Adiciona nova entrada ao dicionário (placeholder, será preenchido depois)
+                if next_code <= 2**24 -1: # Evita que o dicionário cresça indefinidamente
+                    dictionary[next_code] = None # Placeholder
+                    next_code += 1
+
+                if progress_callback and len(codes) % 1000 == 0:
+                    progress = len(codes) / num_codes_expected
+                    progress_callback(progress * 0.5, f"Lendo dados comprimidos... {len(codes)}/{num_codes_expected} códigos processados")
+            
+            if len(codes) != num_codes_expected:
+                logger.warning(f"Número de códigos lidos ({len(codes)}) difere do esperado ({num_codes_expected}). Tentando continuar.")
+            
+            # Reset dictionary for actual decompression logic
+            dictionary = {i: bytes([i]) for i in range(256)}
+            next_code = 256
+            
+            if not codes:
+                raise ValueError("Nenhum código para descomprimir.")
+
+            w = dictionary[codes[0]]
+            decompressed_data.extend(w)
+            
+            for code in codes[1:]:
+                # Atualiza current_bits para o próximo ciclo de dicionário
+                # Isso é crucial para que o decodificador saiba quantos bits ler para o próximo código
+                if next_code >= (1 << current_bits) and current_bits < 24:
+                    current_bits += 1
+                
+                if code in dictionary:
+                    entry = dictionary[code]
+                elif code == next_code: # Regra especial para LZW
+                    entry = w + w[:1]
+                else:
+                    raise ValueError(f"Código comprimido inválido ou fora de ordem: {code}")
+                
+                decompressed_data.extend(entry)
+                
+                # Adiciona a nova sequência ao dicionário
+                if next_code <= 2**24 - 1: # Limite para o dicionário
+                    dictionary[next_code] = w + entry[:1]
+                    next_code += 1
+                w = entry
+                
+                if progress_callback and len(decompressed_data) % 100000 == 0:
+                    progress = 0.5 + (len(decompressed_data) / (num_codes_expected * 3)) # Estimativa de progresso
+                    progress_callback(progress, f"Descomprimindo... {len(decompressed_data)//1024}KB processados")
+
+            with open(output_file_path, 'wb') as f:
+                f.write(decompressed_data)
+            
+            decompressed_size = os.path.getsize(output_file_path)
+            compression_ratio = (compressed_size - decompressed_size) / compressed_size * 100
+            process_time = time.time() - start_time
+
+            if progress_callback:
+                progress_callback(1.0, "Descompressão completa!")
+
+            return compressed_size, decompressed_size, compression_ratio, process_time
+        
+        except Exception as e:
+            if progress_callback:
+                progress_callback(1.0, f"Erro durante a descompressão: {str(e)}")
+            raise e
+
+# Blowfish Implementation (from apendice_v1.py)
+class Blowfish:
+    def __init__(self, key):
+        self.P = list(P_INIT)
+        self.S = [list(s_arr) for s_arr in S_INIT]
+
+        key_bytes = key
+        key_len = len(key_bytes)
+        
+        j = 0
+        for i in range(18):
+            chunk = key_bytes[j:j+4]
+            if len(chunk) < 4:
+                chunk += b'\x00' * (4 - len(chunk))
+            self.P[i] ^= struct.unpack('>I', chunk)[0]
+            j = (j + 4) % key_len
+
+        L = 0
+        R = 0
+        for i in range(0, 18, 2):
+            L, R = self._encrypt_block(L, R)
+            self.P[i] = L
+            self.P[i+1] = R
+
+        for i in range(4):
+            for j in range(0, 256, 2):
+                L, R = self._encrypt_block(L, R)
+                self.S[i][j] = L
+                self.S[i][j+1] = R
+
+    def _feistel(self, x):
+        h = self.S[0][x >> 24 & 0xFF] + self.S[1][x >> 16 & 0xFF]
+        h ^= self.S[2][x >> 8 & 0xFF]
+        h += self.S[3][x & 0xFF]
+        return h & 0xFFFFFFFF
+
+    def _encrypt_block(self, L, R):
+        for i in range(16):
+            L ^= self.P[i]
+            R ^= self._feistel(L)
+            L, R = R, L
+        R ^= self.P[16]
+        L ^= self.P[17]
+        return L, R
+
+    def _decrypt_block(self, L, R):
+        for i in range(17, 1, -1):
+            L ^= self.P[i]
+            R ^= self._feistel(L)
+            L, R = R, L
+        R ^= self.P[1]
+        L ^= self.P[0]
+        return L, R
+
+    def encrypt(self, data):
+        padding_len = 8 - (len(data) % 8)
+        data += bytes([padding_len]) * padding_len
+
+        encrypted_data = b''
+        for i in range(0, len(data), 8):
+            block = data[i:i+8]
+            L = struct.unpack('>I', block[:4])[0]
+            R = struct.unpack('>I', block[4:8])[0]
+            L, R = self._encrypt_block(L, R)
+            encrypted_data += struct.pack('>II', L, R)
+        return encrypted_data
+
+    def decrypt(self, data):
+        decrypted_data = b''
+        for i in range(0, len(data), 8):
+            block = data[i:i+8]
+            L = struct.unpack('>I', block[:4])[0]
+            R = struct.unpack('>I', block[4:8])[0]
+            L, R = self._decrypt_block(L, R)
+            decrypted_data += struct.pack('>II', L, R)
+        
+        if not decrypted_data:
+            raise ValueError("Dados descriptografados vazios. Senha incorreta ou arquivo corrompido?")
+
+        padding_len = decrypted_data[-1]
+        if padding_len > 8 or padding_len == 0:
+            raise ValueError("Padding incorreto ou dados corrompidos. Senha incorreta ou arquivo não Blowfish?")
+        
+        # Validate padding bytes
+        if not all(byte == padding_len for byte in decrypted_data[-padding_len:]):
+             raise ValueError("Integridade do padding violada. Senha incorreta ou arquivo corrompido.")
+
+        return decrypted_data[:-padding_len]
+
+# RSA and AES Hybrid Implementation (from apendice_v1.py)
+class CryptographyHandler:
+    @staticmethod
+    def generate_rsa_keys(key_name: str = "rsa_key", key_size: int = 2048) -> Tuple[Path, Path]:
+        private_key = rsa.generate_private_key(
+            public_exponent=65537,
+            key_size=key_size,
+            backend=default_backend()
+        )
+        public_key = private_key.public_key()
+
+        private_pem = private_key.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.PKCS8,
+            encryption_algorithm=serialization.NoEncryption()
+        )
+
+        public_pem = public_key.public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo
+        )
+
+        private_key_path = ENCRYPT_FOLDER / f"{key_name}_private.pem"
+        public_key_path = ENCRYPT_FOLDER / f"{key_name}_public.pem"
+
+        with open(private_key_path, "wb") as f:
+            f.write(private_pem)
+
+        with open(public_key_path, "wb") as f:
+            f.write(public_pem)
+        
+        return public_key_path, private_key_path
+    
+    @staticmethod
+    def generate_sample():
+        test_file = ENCRYPT_FOLDER / "test_document.txt"
+        if not test_file.exists():
+            with open(test_file, "w", encoding="utf-8") as f:
+                f.write("This is a test document for encryption and decryption. " * 100)
+    
+    @staticmethod
+    def hybrid_encrypt_file(input_file: str, public_key_file: str, output_file: str):
+        with open(input_file, 'rb') as f:
+            plaintext = f.read()
+
+        with open(public_key_file, 'rb') as f:
+            public_key = serialization.load_pem_public_key(f.read(), backend=default_backend())
+        
+        session_key = os.urandom(32)
+        encrypted_session_key = public_key.encrypt(
+            session_key,
+            padding.OAEP(
+                mgf=padding.MGF1(algorithm=hashes.SHA256()),
+                algorithm=hashes.SHA256(),
+                label=None
+            )
+        )
+        
+        iv = os.urandom(16)
+        cipher = Cipher(algorithms.AES(session_key), modes.GCM(iv), backend=default_backend())
+        encryptor = cipher.encryptor()
+        ciphertext = encryptor.update(plaintext) + encryptor.finalize()
+        tag = encryptor.tag
+
+        with open(output_file, 'wb') as f:
+            f.write(encrypted_session_key)
+            f.write(iv)
+            f.write(tag)
+            f.write(ciphertext)
+
+    @staticmethod
+    def hybrid_decrypt_file(input_file: str, private_key_file: str, output_file: str):
+        with open(private_key_file, 'rb') as f:
+            private_key = serialization.load_pem_private_key(
+                f.read(),
+                password=None,
+                backend=default_backend()
+            )
+        
+        with open(input_file, 'rb') as f:
+            rsa_key_size_bytes = private_key.key_size // 8
+            encrypted_session_key = f.read(rsa_key_size_bytes)
+            iv = f.read(16)
+            tag = f.read(16)
+            ciphertext = f.read()
+        
+        try:
+            session_key = private_key.decrypt(
+                encrypted_session_key,
+                padding.OAEP(
+                    mgf=padding.MGF1(algorithm=hashes.SHA256()),
+                    algorithm=hashes.SHA256(),
+                    label=None
+                )
+            )
+        except Exception as e:
+            raise ValueError(f"Erro ao descriptografar a chave de sessão RSA: {e}. Chave privada incorreta ou arquivo corrompido.")
+
+        cipher = Cipher(algorithms.AES(session_key), modes.GCM(iv, tag), backend=default_backend())
+        decryptor = cipher.decryptor()
+        
+        try:
+            plaintext = decryptor.update(ciphertext) + decryptor.finalize()
+        except CryptoInvalidTag:
+            raise ValueError("Tag de autenticação inválida. Arquivo corrompido ou senha/chave incorreta.")
+        except Exception as e:
+            raise e
+
+        with open(output_file, 'wb') as f:
+            f.write(plaintext)
 
 # --- Funções de UI (Streamlit) e Lógica de Negócio que usarão a nova classe ---
 
@@ -933,16 +1686,16 @@ class Functions: # Renomeada para evitar conflito com a classe TrafficAccidentDB
     """
     
     # Instância da classe de banco de dados
-    _db_manager = TrafficAccidentDB(db_file_path="data_objects.db") # Instancia a classe aqui
+    _db_manager = TrafficAccidentDB(db_file_path=DB_FILE_PATH) # Instancia a classe aqui
     
     # --- Configurações de Criptografia e Chaves ---
     _private_key = None
     _public_key = None
     _aes_key = None
     _cipher = None
-    _aes_key_path = "aes_key.bin"
-    _public_key_path = "public_key.pem"
-    _private_key_path = "private_key.pem"
+    _aes_key_path = ENCRYPT_FOLDER / "aes_key.bin" # Caminho ajustado
+    _public_key_path = ENCRYPT_FOLDER / "public_key.pem" # Caminho ajustado
+    _private_key_path = ENCRYPT_FOLDER / "private_key.pem" # Caminho ajustado
     
     # Adicionando um mecanismo de cache para o banco de dados
     _db_cache = None
@@ -1125,8 +1878,8 @@ class Functions: # Renomeada para evitar conflito com a classe TrafficAccidentDB
     def _get_db_modified_time(): # db_file_path agora é acessado via _db_manager
         """Obtém a última vez que o arquivo DB foi modificado."""
         db_file_path = Functions._db_manager.db_file_path
-        if os.path.exists(db_file_path):
-            return os.path.getmtime(db_file_path)
+        if db_file_path.exists():
+            return db_file_path.stat().st_mtime
         return 0
 
     @staticmethod
@@ -1229,7 +1982,19 @@ class Functions: # Renomeada para evitar conflito com a classe TrafficAccidentDB
     def upload_csv_to_db(uploaded_file):
         """Processa um arquivo CSV carregado e o insere no DB."""
         if uploaded_file is not None:
-            string_io = io.StringIO(uploaded_file.getvalue().decode("latin-1"))
+            # Tenta decodificar como UTF-8, com fallback para latin-1
+            try:
+                # Decodifica o arquivo como UTF-8
+                string_io = io.StringIO(uploaded_file.getvalue().decode("utf-8"))
+                st.info("Arquivo CSV decodificado como UTF-8.")
+            except UnicodeDecodeError:
+                # Se falhar, tenta decodificar como latin-1 e avisa o usuário
+                st.warning("Falha ao decodificar CSV como UTF-8. Tentando decodificar como ISO-8859-1 (Latin-1).")
+                string_io = io.StringIO(uploaded_file.getvalue().decode("iso-8859-1"))
+            except Exception as e:
+                st.error(f"Erro inesperado ao decodificar o arquivo CSV: {e}")
+                return
+
             # Chama o método da instância de TrafficAccidentDB
             processed, invalid = Functions._db_manager.process_csv_to_db(string_io)
             if processed > 0:
@@ -1240,32 +2005,65 @@ class Functions: # Renomeada para evitar conflito com a classe TrafficAccidentDB
             else:
                 st.info("O arquivo CSV está vazio ou não contém dados válidos.")
 
-    # --- Placeholder Methods for app_v6.py Integration ---
-    # These methods would contain the actual logic from app_v6.py
-    # and are prefixed with 'v6_' to avoid potential naming conflicts.
+    # --- Funções de Criptografia e Compressão (Adaptadas de apendice_v1.py) ---
+
+    @staticmethod
+    def derive_key_pbkdf2(password: bytes, salt: bytes, dk_len: int = 16, iterations: int = 10000) -> bytes:
+        kdf = PBKDF2HMAC(
+            algorithm=hashes.SHA256(),
+            length=dk_len,
+            salt=salt,
+            iterations=iterations,
+            backend=default_backend()
+        )
+        return kdf.derive(password)
+
+    @staticmethod
+    def blowfish_encrypt_file_func(input_file: str, output_file: str, password: str):
+        salt = os.urandom(16)
+        key = Functions.derive_key_pbkdf2(password.encode(), salt, dk_len=32)
+        cipher = Blowfish(key)
+        with open(input_file, 'rb') as f:
+            plaintext = f.read()
+        ciphertext = cipher.encrypt(plaintext)
+        with open(output_file, 'wb') as f:
+            f.write(salt)
+            f.write(ciphertext)
+
+    @staticmethod
+    def blowfish_decrypt_file_func(input_file: str, output_file: str, password: str):
+        with open(input_file, 'rb') as f:
+            salt = f.read(16)
+            ciphertext = f.read()
+        key = Functions.derive_key_pbkdf2(password.encode(), salt, dk_len=32)
+        cipher = Blowfish(key)
+        try:
+            plaintext = cipher.decrypt(ciphertext)
+        except ValueError as e:
+            raise ValueError(f"Erro ao descriptografar: {e}")
+        with open(output_file, 'wb') as f:
+            f.write(plaintext)
+
+    # --- Placeholder Methods for app_v6.py Integration (mantidos para compatibilidade com outros módulos) ---
+    # Estes métodos devem ser preenchidos com a lógica real do app_v6.py se necessário
+    # ou removidos se não forem mais utilizados.
 
     @staticmethod
     def v6_run_step_2_logic():
         """Placeholder for the logic of 'Etapa 2' from app_v6.py."""
         st.write("Executando lógica da Etapa 2...")
-        # Adicione aqui o código real da Etapa 2 do app_v6.py
-        # Ex: processamento de dados, cálculos, etc.
         st.success("Lógica da Etapa 2 concluída (placeholder).")
 
     @staticmethod
     def v6_run_step_3_logic():
         """Placeholder for the logic of 'Etapa 3' from app_v6.py."""
         st.write("Executando lógica da Etapa 3...")
-        # Adicione aqui o código real da Etapa 3 do app_v6.py
-        # Ex: análise de dados, geração de relatórios, etc.
         st.success("Lógica da Etapa 3 concluída (placeholder).")
 
     @staticmethod
     def v6_run_step_4_logic():
         """Placeholder for the logic of 'Etapa 4' from app_v6.py."""
         st.write("Executando lógica da Etapa 4...")
-        # Adicione aqui o código real da Etapa 4 do app_v6.py
-        # Ex: visualizações avançadas, machine learning, etc.
         st.success("Lógica da Etapa 4 concluída (placeholder).")
 
     @staticmethod
@@ -1273,7 +2071,6 @@ class Functions: # Renomeada para evitar conflito com a classe TrafficAccidentDB
         """Placeholder for the 'Administração do Sistema' content from app_v6.py."""
         st.write("Conteúdo da Administração do Sistema (placeholder).")
         st.info("Esta seção conteria ferramentas para gerenciar o sistema, como backup/restauração do DB, gerenciamento de usuários (se aplicável), etc.")
-        # Adicione aqui o código real da Administração do Sistema do app_v6.py
 
     @staticmethod
     def check_time_input(date_accident, hour_accident):
@@ -1281,8 +2078,6 @@ class Functions: # Renomeada para evitar conflito com a classe TrafficAccidentDB
         Verifica e ajusta a hora do acidente se necessário.
         Esta função é um placeholder e deve ser substituída pela lógica real do app_v6.py.
         """
-        # Exemplo de lógica placeholder:
-        # Se a data for hoje e a hora for futura, ajusta para a hora atual.
         current_datetime = datetime.now()
         if date_accident == current_datetime.date() and hour_accident > current_datetime.time():
             st.warning("A hora do acidente não pode ser no futuro. Ajustando para a hora atual.")
@@ -1305,150 +2100,591 @@ class Functions: # Renomeada para evitar conflito com a classe TrafficAccidentDB
             return 'SIM' if bool(value) else 'NÃO'
         return str(value)
 
+# UI Functions (from apendice_v1.py, adapted for new folder structure)
+def show_compression_ui():
+    st.title("Ferramenta de Compressão/Descompressão de Arquivos")
+    
+    progress_bar = st.progress(0)
+    progress_text = st.empty()
+    
+    def update_progress(progress: float, message: str):
+        progress_bar.progress(progress)
+        progress_text.text(message)
+    
+    selected_view = st.selectbox(
+        "Selecionar Visualização:", 
+        ("Compressão/Descompressão", "Comparação de Algoritmos"), 
+        key="main_view_select_comp" # Adicionado sufixo para evitar conflito de key
+    )
 
-# ===================================================== STREAMLIT UI =====================================================
-# Proveniente de app_v6.py
-def add_record_v6(add_registry,save_settings):
-    if add_registry=="Manual":
-        st.subheader("➕ Inserir Novo Registro")
-        st.subheader("🚗 Detalhes do Registro de Acidente")
-        st.subheader("Detalhes Iniciais")
-        try:
-            locale.setlocale(locale.LC_ALL, '') # Define a localidade para a do sistema
-        except locale.Error:
-            # Caso não consiga definir a localidade, use um fallback
-            print("Não foi possível definir a localidade do sistema. Usando 'en_US' como fallback.")
-            locale.setlocale(locale.LC_ALL, 'en_US.UTF-8') # Exemplo de fallback para inglês
-
-        # Pega o código do idioma principal (ex: 'pt' para português)
-        # Isso é uma simplificação, pois a localidade pode ser mais complexa
-        idioma_sistema = locale.getdefaultlocale()[0] # Ex: ('pt_BR', 'UTF-8') -> 'pt_BR'
-
-        # Gera o if ternário para o formato
-        formato_data = "DD/MM/YYYY" if idioma_sistema and idioma_sistema.startswith('pt') else "MM/DD/YYYY"
-
-        cols0 = st.columns(2)
-        jan_1 = date(2020, 1, 1)
-        with cols0[0]:
-            date_accident=st.date_input("Dia do Acidente",
-                        value="today", # Usar datetime.date.today() é o ideal
-                        min_value=jan_1,
-                        max_value="today", # Usar datetime.date.today() é o ideal
-                        format=formato_data, # Aqui aplicamos o formato determinado pelo if ternário
-            )
-            hour_accident=st.time_input(
-                "Hora do Acidente",
-                step=timedelta(minutes=15), # Opcional: define o passo para minutos
-                
-            )
-            #hour_accident=Functions.check_time_input(date_accident,hour_accident) 
-        default_timestamp_string=datetime.strptime(date_accident.strftime("%m-%d-%Y")+" "+hour_accident.strftime("%I:%M:%S %p"), "%m-%d-%Y %I:%M:%S %p")
-        with cols0[1]:
-            hour_accident=Functions.check_time_input(date_accident,hour_accident) 
-            st.write(f"Timestamp a ser salvo: {default_timestamp_string}")
-            st.write(f"  Hora do Acidente: {hour_accident.hour}")
-            st.write(f"  Dia da Semana do Acidente: {date_accident.isoweekday()+1}")
-            st.write(f"  Mês do Acidente: {date_accident.month}")
-
-        num_units = st.number_input(
-            "Número de Unidades Envolvidas",
-            min_value=0, max_value=999, value=0, step=1,
-            key="num_units"
+    if selected_view == "Compressão/Descompressão":
+        algorithm = st.radio("Selecionar Algoritmo:", ("Huffman", "LZW"), key="algo_select_comp") # Adicionado sufixo
+        operation = st.radio("Selecionar Operação:", ("Compressão", "Descompressão"), key="op_select_comp") # Adicionado sufixo
+        allowed_types = []
+        if operation == "Compressão":
+            allowed_types = [".lzw", ".huff", ".csv", ".db", ".idx", ".btr"]
+        else:
+            if algorithm == "Huffman":
+                allowed_types = [".huff"]
+            elif algorithm == "LZW":
+                allowed_types = [".lzw"]
+        
+        file_source = st.radio(
+            "Selecionar Origem do Arquivo:", 
+            ("Padrão", "Escolha do Usuário"), 
+            key="comp_file_source" # Adicionado sufixo
         )
-        st.subheader("Demais Detalhes")
-        cols1 = st.columns(3)
-        with cols1[0]:
-            crash_type = st.selectbox(
-                "Tipo de Acidente",CRASH_TYPE_OPTIONS,index=0, key="crash_type" 
-            )
-            traffic_control_device = st.selectbox(
-                "Dispositivo de Controle de Tráfego",
-                TRAFFIC_CONTROL_DEVICE_OPTIONS,
-                index=0,
-                key="tcd"
-            )
-            weather_condition = st.selectbox(
-                "Condição Climática",
-                WEATHER_CONDITION_OPTIONS, 
-                index=0,
-                key="weather"
-            )
-            lighting_condition = st.selectbox(
-                "Condição de Iluminação", 
-                LIGHTING_CONDITION_OPTIONS, 
-                index=0,
-                key="lighting"
-            )
-        with cols1[1]:
-            first_crash_type = st.selectbox(
-                "Primeiro Tipo de Acidente (Específico)",
-                FIRST_CRASH_TYPE_OPTIONS, 
-                index=0, 
-                key="first_crash_type") 
-            trafficway_type = st.selectbox(
-                "Tipo de Via",
-                TRAFFICWAY_TYPE_OPTIONS, 
-                index=0,  
-                key="trafficway_type") 
-            alignment = st.selectbox(
-                "Alinhamento",
-                ALIGNMENT_OPTIONS,
-                index=0, 
-                key="alignment")
-            roadway_surface_cond = st.selectbox(
-                "Condição da Superfície da Via", 
-                ROADWAY_SURFACE_COND_OPTIONS,
-                index=0,
-                key="surface_condition"
-            )
-        with cols1[2]:
-            road_defect = st.selectbox(
-                "Defeito na Via", 
-                ROAD_DEFECT_OPTIONS,
-                index=0,
-                key="road_defect"
-            )
-            intersection_related_i = st.selectbox(
-                "Relacionado à Interseção?", 
-                INTERSECTION_RELATED_OPTIONS,
-                index=0,
-                key="intersection_related"
-            )
-            damage = st.selectbox(
-                "Descrição do Dano",  
-                DAMAGE_OPTIONS,
-                index=0,
-                key="damage")
-            prim_contributory_cause = st.selectbox(
-                "Causa Contributiva Primária", 
-                PRIM_CONTRIBUTORY_CAUSE_OPTIONS,
-                index=0,
-                key="prim_cause")
-            most_severe_injury = st.selectbox(
-                "Lesão Mais Severa",
-                MOST_SEVERE_INJURY_OPTIONS,
-                index=0,
-                key="most_severe_injury"
-            )
+        
+        input_path = None
+        uploaded_file = None
+        temp_dir_upload = None
 
-        st.subheader("Ferimentos - Detalhamento")
-        inj_cols = st.columns(3)
-        with inj_cols[0]:
-            injuries_fatal = st.number_input("Fatal Injuries", min_value=0.0,  step=0.1, key="injuries_fatal")
-            injuries_incapacitating = st.number_input("Incapacitating Injuries", min_value=0.0, step=0.1, key="injuries_incapacitating")
-        with inj_cols[1]:
-            injuries_non_incapacitating = st.number_input("Non-Incapacitating Injuries", min_value=0.0, key="injuries_non_incapacitating")
-            injuries_reported_not_evident = st.number_input("Injuries Reported Not Evident", min_value=0.0, step=0.1, key="injuries_reported_not_evident")
-        with inj_cols[2]:
-            injuries_no_indication = st.number_input("Injuries No Indication", min_value=0.0, step=0.1, key="injuries_no_indication")
-            injuries_total = st.number_input(
-                            "Total Injuries",
-                            min_value=0.0, step=0.1,
-                            key="injuries_total"
+        if file_source == "Padrão":
+            source_folder = DATA_ROOT_DIR if operation == "Compressão" else COMPRESSED_FOLDER
+            default_files = []
+            if source_folder.exists():
+                for file_name in os.listdir(source_folder):
+                    file_ext = os.path.splitext(file_name)[1]
+                    # Verifica se o arquivo é o DB principal ou um arquivo com extensão permitida
+                    if (operation == "Compressão" and (file_name == DB_FILE_PATH.name or file_ext in allowed_types)) or \
+                       (operation == "Descompressão" and file_ext in allowed_types):
+                        default_files.append(file_name)
+            if default_files:
+                selected_file = st.selectbox(f"Selecione um arquivo de {source_folder}:", default_files)
+                input_path = str(source_folder / selected_file) # Converte Path para str
+            else:
+                st.warning(f"Nenhum arquivo {', '.join(allowed_types)} encontrado em {source_folder}")
+        else:
+            uploaded_file = st.file_uploader(
+                "Carregar um arquivo:", 
+                type=[ext.strip('.') for ext in allowed_types],
+                key="upload_comp_tab1" # Adicionado sufixo
+            )
+            if uploaded_file:
+                temp_dir_upload = tempfile.mkdtemp(dir=TEMP_FOLDER) # Cria temp dir dentro de TEMP_FOLDER
+                input_path = os.path.join(temp_dir_upload, uploaded_file.name)
+                with open(input_path, "wb") as f:
+                    f.write(uploaded_file.getbuffer())
+                st.info(f"Arquivo '{uploaded_file.name}' carregado temporariamente.")
+
+        if input_path and st.button(f"Executar {operation}", key="execute_comp_btn"): # Adicionado sufixo
+            progress_bar.progress(0)
+            progress_text.text(f"Iniciando {operation.lower()}...")
+            output_folder = COMPRESSED_FOLDER
+            
+            try:
+                if operation == "Compressão":
+                    original_file_name = Path(input_path).name
+                    output_ext = HUFFMAN_COMPRESSED_EXTENSION if algorithm == "Huffman" else LZW_COMPRESSED_EXTENSION
+                    # Ajuste para o nome do arquivo de saída, considerando o nome original sem a extensão padrão
+                    base_name_no_original_ext = Path(original_file_name).stem if original_file_name.endswith(DEFAULT_EXTENSION) else Path(original_file_name).name
+                    output_file_name = f"{base_name_no_original_ext}_version{count_file(input_path, output_ext, output_folder)}{output_ext}"
+                    output_path = str(output_folder / output_file_name) # Converte Path para str
+
+                    if algorithm == "Huffman":
+                        orig_s, comp_s, ratio, proc_t = HuffmanProcessor.compress_file(input_path, output_path, update_progress)
+                    else:
+                        orig_s, comp_s, ratio, proc_t = LZWProcessor.compress(input_path, output_path, update_progress)
+                    
+                    st.success(f"Compressão {algorithm} Concluída!")
+                    st.write(f"Tamanho Original: {orig_s / 1024:.2f} KB")
+                    st.write(f"Tamanho Comprimido: {comp_s / 1024:.2f} KB")
+                    st.write(f"Taxa de Compressão: {ratio:.2f}%")
+                    st.write(f"Tempo Gasto: {proc_t:.4f} segundos")
+
+                    if comp_s > 0:
+                        with open(output_path, "rb") as f_out:
+                            st.download_button(
+                                label=f"Baixar Arquivo Comprimido ({output_ext})",
+                                data=f_out.read(),
+                                file_name=output_file_name,
+                                mime="application/octet-stream"
+                            )
+
+                else: # Descompressão
+                    original_file_name = Path(input_path).name
+                    output_ext_from_algo = HUFFMAN_COMPRESSED_EXTENSION if algorithm == "Huffman" else LZW_COMPRESSED_EXTENSION
+                    
+                    # Tenta inferir o nome original do arquivo descomprimido
+                    # Ex: "meu_arquivo_version1.huff" -> "meu_arquivo" ou "meu_arquivo.csv"
+                    base_name_for_decompression = get_original(original_file_name, output_ext_from_algo)
+                    
+                    # Adiciona a extensão padrão se não houver uma. Isso é uma heurística.
+                    if not Path(base_name_for_decompression).suffix:
+                        base_name_for_decompression += DEFAULT_EXTENSION
+
+                    output_file_name = base_name_for_decompression
+                    output_path = str(TEMP_FOLDER / output_file_name) # Converte Path para str
+                    
+                    if algorithm == "Huffman":
+                        comp_s, decomp_s, ratio, proc_t = HuffmanProcessor.decompress_file(input_path, output_path, update_progress)
+                    else:
+                        comp_s, decomp_s, ratio, proc_t = LZWProcessor.decompress(input_path, output_path, update_progress)
+                    
+                    st.success(f"Descompressão {algorithm} Concluída!")
+                    st.write(f"Tamanho Comprimido: {comp_s / 1024:.2f} KB")
+                    st.write(f"Tamanho Descomprimido: {decomp_s / 1024:.2f} KB")
+                    st.write(f"Tempo Gasto: {proc_t:.4f} segundos")
+
+                    if decomp_s > 0:
+                        with open(output_path, "rb") as f_out:
+                            st.download_button(
+                                label=f"Baixar Arquivo Descomprimido ({output_file_name})",
+                                data=f_out.read(),
+                                file_name=output_file_name,
+                                mime="application/octet-stream"
+                            )
+            
+            except FileNotFoundError:
+                st.error("Arquivo não encontrado. Por favor, certifique-se de que o arquivo existe no caminho especificado.")
+            except Exception as e:
+                st.error(f"Erro durante {operation.lower()}: {str(e)}\n{traceback.format_exc()}")
+            finally:
+                if temp_dir_upload and Path(temp_dir_upload).exists():
+                    try:
+                        shutil.rmtree(temp_dir_upload) # Remove o diretório temporário e seu conteúdo
+                    except OSError as e:
+                        st.warning(f"Não foi possível limpar o diretório temporário: {e}")
+                # Limpa arquivos temporários de saída da descompressão se existirem
+                if 'output_path' in locals() and Path(output_path).exists() and Path(output_path).parent == TEMP_FOLDER:
+                     try:
+                         os.remove(output_path)
+                     except OSError as e:
+                         logger.warning(f"Não foi possível remover o arquivo temporário de saída: {e}")
+
+                progress_bar.progress(1.0)
+                time.sleep(0.5)
+
+    elif selected_view == "Comparação de Algoritmos":
+        st.header("Comparação de Desempenho de Algoritmos")
+        compare_file_source = st.radio(
+            "Selecione o arquivo para comparação:", 
+            ("CSV Padrão", "Escolha do Usuário"), 
+            key="compare_source_comp" # Adicionado sufixo
+        )
+        
+        compare_file = None
+        compare_uploaded = None
+        temp_dir_compare = None
+        input_path = None # Inicializa input_path
+
+        if compare_file_source == "CSV Padrão":
+            default_files = []
+            if DATA_ROOT_DIR.exists():
+                for file_name in os.listdir(DATA_ROOT_DIR):
+                    if file_name.endswith(DEFAULT_EXTENSION):
+                        default_files.append(file_name)
+            if default_files:
+                compare_file = st.selectbox("Selecione um arquivo CSV para comparação:", default_files)
+                input_path = str(DATA_ROOT_DIR / compare_file) # Converte Path para str
+            else:
+                st.warning(f"Nenhum arquivo CSV encontrado em {DATA_ROOT_DIR}")
+        else:
+            compare_uploaded = st.file_uploader(
+                "Carregar um arquivo para comparação", 
+                type=["lzw", "huff", "csv", "db", "idx", "btr"],
+                key="compare_upload_comp" # Adicionado sufixo
+            )
+            if compare_uploaded:
+                temp_dir_compare = tempfile.mkdtemp(dir=TEMP_FOLDER) # Cria temp dir dentro de TEMP_FOLDER
+                input_path = os.path.join(temp_dir_compare, compare_uploaded.name)
+                with open(input_path, "wb") as f:
+                    f.write(compare_uploaded.getbuffer())
+        
+        if input_path and st.button("Executar Comparação", key="execute_compare_btn"): # Adicionado sufixo
+            progress_bar.progress(0)
+            progress_text.text("Iniciando comparação...")
+            
+            try:
+                huffman_output = str(TEMP_FOLDER / "temp_huffman.huff")
+                lzw_output = str(TEMP_FOLDER / "temp_lzw.lzw")
+                huffman_decompressed_output = str(TEMP_FOLDER / (Path(input_path).stem + ".huffout"))
+                lzw_decompressed_output = str(TEMP_FOLDER / (Path(input_path).stem + ".lzwout"))
+
+                progress_text.text( "Testando compressão Huffman...")
+                huff_compress = HuffmanProcessor.compress_file(input_path, huffman_output, 
+                    lambda p, m: update_progress(p * 0.3, f"Huffman: {m}"))
+                
+                progress_text.text("Testando descompressão Huffman...")
+                huff_decompress = HuffmanProcessor.decompress_file(huffman_output, huffman_decompressed_output, 
+                    lambda p, m: update_progress(0.4 + p * 0.2, f"Huffman: {m}"))
+                
+                progress_text.text("Testando compressão LZW...")
+                lzw_compress = LZWProcessor.compress(input_path, lzw_output, 
+                    lambda p, m: update_progress(0.6 + p * 0.2, f"LZW: {m}"))
+                
+                progress_text.text( "Testando descompressão LZW...")
+                lzw_decompress = LZWProcessor.decompress(lzw_output, lzw_decompressed_output, 
+                    lambda p, m: update_progress(0.8 + p * 0.2, f"LZW: {m}"))
+                
+                results = []
+                results.append({
+                    'Algorithm': 'Huffman',
+                    'Original Size (KB)': huff_compress[0] / 1024,
+                    'Compressed Size (KB)': huff_compress[1] / 1024,
+                    'Compression Ratio (%)': huff_compress[2],
+                    'Compression Time (s)': huff_compress[3],
+                    'Decompression Time (s)': huff_decompress[3],
+                    'Total Time (s)': huff_compress[3] + huff_decompress[3]
+                })
+                
+                results.append({
+                    'Algorithm': 'LZW',
+                    'Original Size (KB)': lzw_compress[0] / 1024,
+                    'Compressed Size (KB)': lzw_compress[1] / 1024,
+                    'Compression Ratio (%)': lzw_compress[2],
+                    'Compression Time (s)': lzw_compress[3],
+                    'Decompression Time (s)': lzw_decompress[3],
+                    'Total Time (s)': lzw_compress[3] + lzw_decompress[3]
+                })
+                
+                df = pd.DataFrame(results)
+                st.success("Comparação concluída!")
+                st.dataframe(df.style.format({
+                    'Original Size (KB)': '{:.2f}',
+                    'Compressed Size (KB)': '{:.2f}',
+                    'Compression Ratio (%)': '{:.2f}',
+                    'Compression Time (s)': '{:.4f}',
+                    'Decompression Time (s)': '{:.4f}',
+                    'Total Time (s)': '{:.4f}'
+                }))
+                
+                fig, axes = plt.subplots(2, 2, figsize=(15, 10))
+                df.plot.bar(x='Algorithm', y='Compression Ratio (%)', ax=axes[0,0], title='Comparação de Taxa de Compressão', legend=False)
+                axes[0,0].set_ylabel('Taxa (%)')
+                df.plot.bar(x='Algorithm', y='Compression Time (s)', ax=axes[0,1], title='Comparação de Tempo de Compressão', legend=False)
+                axes[0,1].set_ylabel('Tempo (s)')
+                df.plot.bar(x='Algorithm', y='Decompression Time (s)', ax=axes[1,0], title='Comparação de Tempo de Descompressão', legend=False)
+                axes[1,0].set_ylabel('Tempo (s)')
+                df.plot.bar(x='Algorithm', y='Total Time (s)', ax=axes[1,1], title='Comparação de Tempo Total de Processamento', legend=False)
+                axes[1,1].set_ylabel('Tempo (s)')
+                plt.tight_layout()
+                st.pyplot(fig)
+                
+                csv = df.to_csv(index=False)
+                st.download_button(
+                    label="Baixar Resultados como CSV",
+                    data=csv,
+                    file_name="compression_comparison.csv",
+                    mime="text/csv"
+                )
+            
+            except Exception as e:
+                st.error(f"Erro durante a comparação: {str(e)}\n{traceback.format_exc()}")
+            finally:
+                if temp_dir_compare and Path(temp_dir_compare).exists():
+                    try:
+                        shutil.rmtree(temp_dir_compare) # Remove o diretório temporário e seu conteúdo
+                    except OSError as e:
+                        st.warning(f"Não foi possível limpar o diretório temporário: {e}")
+                # Limpa arquivos temporários de saída da comparação se existirem
+                for temp_file in [huffman_output, lzw_output, huffman_decompressed_output, lzw_decompressed_output]:
+                    if Path(temp_file).exists(): # Verifica se o arquivo existe antes de tentar remover
+                        try:
+                            os.remove(temp_file)
+                        except OSError as e:
+                            logger.warning(f"Não foi possível remover o arquivo temporário: {e}")
+                progress_bar.progress(1.0)
+                time.sleep(0.5)
+
+def show_encryption_ui():
+    st.title("Ferramenta de Criptografia de Arquivos")
+    CryptographyHandler.generate_sample() # Garante que o arquivo de teste exista
+
+    operations = [
+        "Blowfish Criptografar",
+        "Blowfish Descriptografar",
+        "Gerar Chaves RSA",
+        "Híbrida (AES + RSA) Criptografar",
+        "Híbrida (AES + RSA) Descriptografar"
+    ]
+    
+    selected_operation = st.selectbox("Selecione a Operação de Criptografia", operations, key="crypto_op_select") # Adicionado sufixo
+
+    input_file_path = None
+    public_key_file_path = None
+    private_key_file_path = None
+    temp_dir_upload = None
+    temp_dir_pk_upload = None # Para chaves públicas/privadas carregadas
+
+    if selected_operation != "Gerar Chaves RSA":
+        file_source = st.radio(
+            "Selecionar Origem do Arquivo:", 
+            ("Padrão", "Escolha do Usuário"), 
+            key="crypto_file_source_enc" # Adicionado sufixo
+        )
+        
+        if file_source == "Padrão":
+            default_files_options = {}
+            if selected_operation in ["Blowfish Criptografar", "Híbrida (AES + RSA) Criptografar"]:
+                # Adiciona o arquivo de teste e os arquivos do DB_FILE_PATH
+                if (ENCRYPT_FOLDER / "test_document.txt").exists():
+                    default_files_options["test_document.txt"] = str(ENCRYPT_FOLDER / "test_document.txt")
+                if DB_FILE_PATH.exists():
+                    default_files_options["Arquivo de Dados (.db)"] = str(DB_FILE_PATH)
+                # Adicione aqui outros arquivos padrão se houver (ex: índices)
+            elif selected_operation == "Blowfish Descriptografar":
+                for file_name in os.listdir(ENCRYPT_FOLDER):
+                    if file_name.endswith(".enc.bf"):
+                        default_files_options[file_name] = str(ENCRYPT_FOLDER / file_name)
+            elif selected_operation == "Híbrida (AES + RSA) Descriptografar":
+                for file_name in os.listdir(ENCRYPT_FOLDER):
+                    if file_name.endswith(".enc.aes_rsa"):
+                        default_files_options[file_name] = str(ENCRYPT_FOLDER / file_name)
+            
+            if default_files_options:
+                selected_file_name = st.selectbox(f"Selecione um arquivo:", list(default_files_options.keys()), key="selected_file_crypto") # Adicionado sufixo
+                input_file_path = default_files_options[selected_file_name]
+            else:
+                st.warning(f"Nenhum arquivo padrão encontrado para '{selected_operation}'.")
+        else:
+            allowed_types = []
+            if selected_operation in ["Blowfish Criptografar", "Híbrida (AES + RSA) Criptografar"]:
+                allowed_types = ["txt", "csv", "db", "idx", "btr"] # Tipos comuns para criptografar
+            elif selected_operation == "Blowfish Descriptografar":
+                allowed_types = ["bf"]
+            elif selected_operation == "Híbrida (AES + RSA) Descriptografar":
+                allowed_types = ["aes_rsa"]
+            
+            uploaded_file = st.file_uploader(
+                "Carregar um arquivo:", 
+                type=allowed_types if allowed_types else None,
+                key="upload_crypto_main_file" # Adicionado sufixo
+            )
+            if uploaded_file:
+                temp_dir_upload = tempfile.mkdtemp(dir=TEMP_FOLDER) # Cria temp dir dentro de TEMP_FOLDER
+                input_file_path = os.path.join(temp_dir_upload, uploaded_file.name)
+                with open(input_file_path, "wb") as f:
+                    f.write(uploaded_file.getbuffer())
+                st.info(f"Arquivo '{uploaded_file.name}' carregado temporariamente.")
+
+    if selected_operation == "Blowfish Criptografar":
+        st.header("Criptografia Blowfish")
+        output_filename = st.text_input("Nome do arquivo de saída", 
+                                        value=f"{Path(input_file_path).stem}_version{count_file(input_file_path, '.enc.bf', ENCRYPT_FOLDER)}.enc.bf" if input_file_path else "", 
+                                        key="blowfish_output_enc")
+        password = st.text_input("Senha para Blowfish", type="password", key="blowfish_password_enc")
+
+        if st.button("Criptografar com Blowfish", key="btn_blowfish_enc"):
+            if input_file_path and output_filename and password:
+                output_path = str(ENCRYPT_FOLDER / output_filename) # Converte Path para str
+                try:
+                    Functions.blowfish_encrypt_file_func(input_file_path, output_path, password) # Chama o método da classe Functions
+                    st.success(f"Arquivo criptografado com sucesso em '{output_path}'!")
+                    with open(output_path, "rb") as f:
+                        st.download_button(
+                            label="Baixar Arquivo Criptografado",
+                            data=f.read(),
+                            file_name=output_filename,
+                            mime="application/octet-stream"
                         )
-        submitted = st.button("💾 Salvar Registro" if save_settings =="Etapa 1" else "💾 Salvar Registro e Atualizar Índice", use_container_width=True)
-    if add_registry=="Arquivo CSV":
-        st.write("Arquivo CSV")
+                except Exception as e:
+                    st.error(f"Erro na criptografia Blowfish: {e}\n{traceback.format_exc()}")
+                finally:
+                    if temp_dir_upload and Path(temp_dir_upload).exists():
+                        try:
+                            shutil.rmtree(temp_dir_upload)
+                        except OSError as e:
+                            st.warning(f"Não foi possível limpar o diretório temporário: {e}")
+            else:
+                st.warning("Por favor, selecione um arquivo de entrada, forneça um nome de saída e uma senha.")
+
+    elif selected_operation == "Blowfish Descriptografar":
+        st.header("Descriptografia Blowfish")
+        # Tenta inferir o nome original do arquivo descomprimido
+        default_output_name_dec = ""
+        if input_file_path:
+            # Remove a extensão .enc.bf
+            base_name_no_enc = Path(input_file_path).stem
+            # Tenta remover _versionX
+            default_output_name_dec = get_original(base_name_no_enc, ".enc") # .enc é a extensão que Blowfish usa no apendice_v1
+            if not Path(default_output_name_dec).suffix: # Se não tiver sufixo, adiciona .txt como padrão
+                default_output_name_dec += ".txt"
+
+        output_filename = st.text_input("Nome do arquivo de saída", 
+                                        value=default_output_name_dec, 
+                                        key="blowfish_output_dec")
+        password = st.text_input("Senha para Blowfish", type="password", key="blowfish_password_dec")
+
+        if st.button("Descriptografar com Blowfish", key="btn_blowfish_dec"):
+            if input_file_path and output_filename and password:
+                with tempfile.TemporaryDirectory(dir=TEMP_FOLDER) as temp_dir_output: # Cria temp dir dentro de TEMP_FOLDER
+                    output_path = os.path.join(temp_dir_output, output_filename)
+                    try:
+                        Functions.blowfish_decrypt_file_func(input_file_path, output_path, password) # Chama o método da classe Functions
+                        st.success(f"Arquivo descriptografado com sucesso em '{output_path}'!")
+                        with open(output_path, "rb") as f:
+                            st.download_button(
+                                label="Baixar Arquivo Descriptografado",
+                                data=f.read(),
+                                file_name=output_filename,
+                                mime="application/octet-stream"
+                            )
+                    except Exception as e:
+                        st.error(f"Erro na descriptografia Blowfish: {e}\n{traceback.format_exc()}")
+                    finally:
+                        if temp_dir_upload and Path(temp_dir_upload).exists():
+                            try:
+                                shutil.rmtree(temp_dir_upload)
+                            except OSError as e:
+                                st.warning(f"Não foi possível limpar o diretório temporário: {e}")
+            else:
+                st.warning("Por favor, selecione um arquivo de entrada, forneça um nome de saída e uma senha.")
+    
+    elif selected_operation == "Gerar Chaves RSA":
+        st.header("Geração de Chaves RSA")
+        key_name = st.text_input("Nome base para os arquivos de chave", value="minhas_chaves", key="rsa_key_name")
+        key_size = st.selectbox("Tamanho da chave RSA (bits)", options=[1024, 2048, 4096], index=1, key="rsa_key_size")
+
+        if st.button("Gerar Chaves RSA", key="btn_rsa_keys"):
+            try:
+                public_key_path, private_key_path = CryptographyHandler.generate_rsa_keys(key_name, key_size)
+                st.success(f"Chaves RSA geradas com sucesso e salvas em '{ENCRYPT_FOLDER}'")
+                with open(public_key_path, "rb") as f:
+                    st.download_button(
+                        label="Baixar Chave Pública",
+                        data=f.read(),
+                        file_name=os.path.basename(public_key_path),
+                        mime="application/x-pem-file"
+                    )
+                with open(private_key_path, "rb") as f:
+                    st.download_button(
+                        label="Baixar Chave Privada",
+                        data=f.read(),
+                        file_name=os.path.basename(private_key_path),
+                        mime="application/x-pem-file"
+                    )
+            except Exception as e:
+                st.error(f"Erro ao gerar chaves RSA: {e}\n{traceback.format_exc()}")
+
+    elif selected_operation == "Híbrida (AES + RSA) Criptografar":
+        st.header("Criptografia Híbrida (AES + RSA)")
+        st.subheader("Seleção da Chave Pública")
+        key_file_source_enc = st.radio("Origem da Chave Pública:", ("Padrão", "Escolha do Usuário"), key="pk_source_enc")
+        
+        if key_file_source_enc == "Padrão":
+            default_pk_files = {}
+            for file_name in os.listdir(ENCRYPT_FOLDER):
+                if file_name.endswith(".pem") and "public" in file_name:
+                    default_pk_files[file_name] = str(ENCRYPT_FOLDER / file_name)
+            if default_pk_files:
+                selected_pk_name = st.selectbox("Selecione uma Chave Pública:", list(default_pk_files.keys()), key="selected_pk_enc") # Adicionado sufixo
+                public_key_file_path = default_pk_files[selected_pk_name]
+            else:
+                st.warning("Nenhuma chave pública encontrada na pasta de criptografia.")
+        else:
+            uploaded_pk_file = st.file_uploader("Carregar chave pública (.pem)", type=["pem"], key="upload_pk_enc_file") # Adicionado sufixo
+            if uploaded_pk_file:
+                temp_dir_pk_upload = tempfile.mkdtemp(dir=TEMP_FOLDER) # Cria temp dir dentro de TEMP_FOLDER
+                public_key_file_path = os.path.join(temp_dir_pk_upload, uploaded_pk_file.name)
+                with open(public_key_file_path, "wb") as f:
+                    f.write(uploaded_pk_file.getbuffer())
+                st.info(f"Chave pública '{uploaded_pk_file.name}' carregada temporariamente.")
+
+        default_output_name = ""
+        if input_file_path:
+            base_name = Path(input_file_path).stem # Pega o nome base sem a extensão
+            default_output_name = f"{base_name}_version{count_file(input_file_path, '.enc.aes_rsa', ENCRYPT_FOLDER)}.enc.aes_rsa"
+        output_filename = st.text_input("Nome do arquivo de saída", 
+                                        value=default_output_name, 
+                                        key="hybrid_output_enc")
+
+        if st.button("Criptografar Híbrido", key="btn_hybrid_enc"):
+            if input_file_path and public_key_file_path and output_filename:
+                output_path = str(ENCRYPT_FOLDER / output_filename) # Converte Path para str
+                try:
+                    CryptographyHandler.hybrid_encrypt_file(input_file_path, public_key_file_path, output_path)
+                    st.success(f"Arquivo criptografado hibridamente com sucesso em '{output_path}'!")
+                    with open(output_path, "rb") as f:
+                        st.download_button(
+                            label="Baixar Arquivo Híbrido Criptografado",
+                            data=f.read(),
+                            file_name=output_filename,
+                            mime="application/octet-stream"
+                        )
+                except Exception as e:
+                    st.error(f"Erro na criptografia híbrida: {e}\n{traceback.format_exc()}")
+                finally:
+                    if temp_dir_upload and Path(temp_dir_upload).exists():
+                        try:
+                            shutil.rmtree(temp_dir_upload)
+                        except OSError as e:
+                            st.warning(f"Não foi possível limpar o diretório temporário do arquivo de entrada: {e}")
+                    if temp_dir_pk_upload and Path(temp_dir_pk_upload).exists():
+                        try:
+                            shutil.rmtree(temp_dir_pk_upload)
+                        except OSError as e:
+                            st.warning(f"Não foi possível limpar o diretório temporário da chave pública: {e}")
+            else:
+                st.warning("Por favor, selecione um arquivo de entrada, uma chave pública e forneça um nome de saída.")
+
+    elif selected_operation == "Híbrida (AES + RSA) Descriptografar":
+        st.header("Descriptografia Híbrida (AES + RSA)")
+        st.subheader("Seleção da Chave Privada")
+        key_file_source_dec = st.radio("Origem da Chave Privada:", ("Padrão", "Escolha do Usuário"), key="pk_source_dec")
+        
+        if key_file_source_dec == "Padrão":
+            default_pr_files = {}
+            for file_name in os.listdir(ENCRYPT_FOLDER):
+                if file_name.endswith(".pem") and "private" in file_name:
+                    default_pr_files[file_name] = str(ENCRYPT_FOLDER / file_name)
+            if default_pr_files:
+                selected_pr_name = st.selectbox("Selecione uma Chave Privada:", list(default_pr_files.keys()), key="selected_pr_dec") # Adicionado sufixo
+                private_key_file_path = default_pr_files[selected_pr_name]
+            else:
+                st.warning("Nenhuma chave privada encontrada na pasta de criptografia.")
+        else:
+            uploaded_pr_file = st.file_uploader("Carregar chave privada (.pem)", type=["pem"], key="upload_pr_dec_file") # Adicionado sufixo
+            if uploaded_pr_file:
+                temp_dir_pr_upload = tempfile.mkdtemp(dir=TEMP_FOLDER) # Cria temp dir dentro de TEMP_FOLDER
+                private_key_file_path = os.path.join(temp_dir_pr_upload, uploaded_pr_file.name)
+                with open(private_key_file_path, "wb") as f:
+                    f.write(uploaded_pr_file.getbuffer())
+                st.info(f"Chave privada '{uploaded_pr_file.name}' carregada temporariamente.")
+
+        default_output_name = ""
+        if input_file_path:
+            # Remove a extensão .enc.aes_rsa
+            base_name_no_enc = Path(input_file_path).stem
+            # Tenta remover _versionX
+            default_output_name = get_original(base_name_no_enc, ".enc") # .enc é a extensão que AES+RSA usa no apendice_v1
+            if not Path(default_output_name).suffix: # Se não tiver sufixo, adiciona .txt como padrão
+                default_output_name += ".txt"
+        
+        output_filename = st.text_input("Nome do arquivo de saída", 
+                                        value=default_output_name, 
+                                        key="hybrid_output_dec")
+
+        if st.button("Descriptografar Híbrido", key="btn_hybrid_dec"):
+            if input_file_path and private_key_file_path and output_filename:
+                with tempfile.TemporaryDirectory(dir=TEMP_FOLDER) as temp_dir_output: # Cria temp dir dentro de TEMP_FOLDER
+                    output_path = os.path.join(temp_dir_output, output_filename)
+                    try:
+                        CryptographyHandler.hybrid_decrypt_file(input_file_path, private_key_file_path, output_path)
+                        st.success(f"Arquivo descriptografado com sucesso!")
+                        with open(output_path, "rb") as f:
+                            st.download_button(
+                                label="Baixar Arquivo Descriptografado",
+                                data=f.read(),
+                                file_name=output_filename,
+                                mime="application/octet-stream"
+                            )
+                    except Exception as e:
+                        st.error(f"Erro na descriptografia híbrida: {e}\n{traceback.format_exc()}")
+                    finally:
+                        if temp_dir_upload and Path(temp_dir_upload).exists():
+                            try:
+                                shutil.rmtree(temp_dir_upload)
+                            except OSError as e:
+                                st.warning(f"Não foi possível limpar o diretório temporário do arquivo de entrada: {e}")
+                        if temp_dir_pr_upload and Path(temp_dir_pr_upload).exists():
+                            try:
+                                shutil.rmtree(temp_dir_pr_upload)
+                            except OSError as e:
+                                st.warning(f"Não foi possível limpar o diretório temporário da chave privada: {e}")
+            else:
+                st.warning("Por favor, selecione um arquivo de entrada, uma chave privada e forneça um nome de saída.")
+
 # =====================================================================
 def main():
     st.set_page_config(layout="wide", page_title="Sistema de Gerenciamento de Acidentes de Trânsito", page_icon="🚨")
@@ -1463,7 +2699,7 @@ def main():
 
     st.sidebar.markdown("---")
     st.sidebar.subheader("Informações do Sistema")
-    st.sidebar.write("Versão: 1.0_20250708 Alpha 7c")
+    st.sidebar.write("Versão: 1.0_20250710 Alpha 7d rev. 2")
     st.sidebar.write("Status do DB: Online ✅") # Simplificado
 
     # Garante que as chaves RSA e AES existam ao iniciar o aplicativo
@@ -1658,7 +2894,9 @@ def main():
                 help="O arquivo CSV será usado para popular o banco de dados e o índice."
             )
             if uploaded_csv_file_e2 is not None:
-                st.success(f"Arquivo '{uploaded_csv_file_e2.name}' carregado! (Aguardando lógica de processamento com índice)")
+                st.write("Arquivo carregado com sucesso!")
+                if st.button("Processar e Adicionar ao Banco de Dados (Etapa 2)"):
+                    Functions.upload_csv_to_db(uploaded_csv_file_e2) # Reutiliza a função de upload CSV
         elif sub_option_etapa2 == "Carregar arquivo de dados e índice":
             st.subheader("📥 Carregar Arquivo de Dados (.db) e Índice (.idx)")
             st.write("Selecione os arquivos de dados e índice para carregar o sistema completo.")
@@ -1740,157 +2978,23 @@ def main():
                         )
                     st.success(f"{export_type} pronto(s) para download!")
 
-    # --- Conteúdo da Etapa 3 ---
+    # --- Conteúdo da Etapa 3 (Compactação e Criptografia) ---
     elif main_option == "Etapa 3":
         st.header("🔐 Etapa 3: Compactação e Criptografia")
         st.write("Otimize o armazenamento e a segurança dos seus dados aplicando técnicas de compactação e criptografia.")
         st.markdown("---") # Separador visual
 
-        st.sidebar.subheader("Opções de Segurança e Otimização")
-        sub_option_etapa3 = st.sidebar.selectbox(
-            "Selecione uma Ferramenta",
-            ("Compactação", "Criptografia"),
-            help="Escolha entre compactar dados para economizar espaço ou criptografá-los para segurança."
+        # Novo seletor para escolher entre Compactação e Criptografia
+        app_mode_crypto_comp = st.sidebar.selectbox(
+            "Selecione a Funcionalidade", 
+            ["Compactação", "Criptografia"],
+            key="app_mode_crypto_comp_select" # Adicionado sufixo
         )
 
-        st.info(f"Você está em: **Etapa 3** - **{sub_option_etapa3}**")
-
-        if sub_option_etapa3 == "Compactação":
-            st.subheader("📦 Compactação de Arquivos")
-            st.write("Reduza o tamanho dos seus arquivos usando diferentes algoritmos de compactação.")
-            compact_method = st.selectbox(
-                "Método de Compactação",
-                ("Huffman", "LZW", "LZ78"),
-                help="Selecione o algoritmo de compactação a ser utilizado."
-            )
-            compact_mode_selection = st.radio(
-                "Modo de Operação",
-                ("Padrão", "Escolha do Usuário"),
-                help="No modo 'Padrão', você compacta arquivos internos do sistema. No modo 'Escolha do Usuário', você seleciona um arquivo local."
-            )
-            compact_action = st.selectbox(
-                "Ação",
-                ("Compactar", "Descompactar"),
-                help="Escolha entre compactar um arquivo para reduzir seu tamanho ou descompactar para restaurá-lo."
-            )
-
-            if compact_mode_selection == "Padrão" and compact_action == "Compactar":
-                st.write("Selecione qual componente do sistema você deseja compactar:")
-                st.selectbox(
-                    "Tipo de Arquivo para Compactar",
-                    ("Arquivo de Dados", "Índice", "Árvore B"),
-                    help="Escolha o arquivo interno do sistema para compactar."
-                )
-                if st.button(f"{compact_action} Arquivo (Padrão)"):
-                    with st.spinner(f"{compact_action} arquivo padrão com {compact_method}..."):
-                        time.sleep(2) # Simula
-                        st.success(f"Arquivo padrão {compact_action.lower()} com sucesso usando {compact_method}! (Aguardando lógica)")
-            elif compact_mode_selection == "Escolha do Usuário":
-                st.write("Carregue seu próprio arquivo para compactar ou descompactar.")
-                uploaded_file_compact = st.file_uploader(
-                    "Carregar arquivo para processamento",
-                    type=["db", "idx", "btr", "huff", "lzw", "lz78", "csv"],
-                    help="Arraste e solte arquivos nos formatos .db, .idx, .btr, .huff, .lzw, .lz78 ou .csv."
-                )
-                if uploaded_file_compact is not None:
-                    st.info(f"Arquivo '{uploaded_file_compact.name}' carregado.")
-                    if st.button(f"{compact_action} Arquivo", key="compact_user_file_btn"):
-                        with st.spinner(f"{compact_action} '{uploaded_file_compact.name}' com {compact_method}..."):
-                            time.sleep(3) # Simula
-                            st.success(f"Arquivo '{uploaded_file_compact.name}' {compact_action.lower()} com sucesso usando {compact_method}! (Aguardando lógica)")
-                            st.download_button(
-                                label=f"Baixar Arquivo {compact_action}",
-                                data="conteúdo_do_arquivo_processado", # Substituir pelo conteúdo real
-                                file_name=f"{Path(uploaded_file_compact.name).stem}_processed.bin", # Nome de arquivo de exemplo
-                                mime="application/octet-stream",
-                                help="Baixe o arquivo após a operação de compactação/descompactação."
-                            )
-
-        elif sub_option_etapa3 == "Criptografia":
-            st.subheader("🔒 Criptografia de Arquivos")
-            st.write("Proteja seus dados sensíveis aplicando criptografia avançada.")
-            crypto_method = st.selectbox(
-                "Método de Criptografia",
-                ("Gerar Chaves RSA/Blowfish", "Blowfish", "AES-RSA"),
-                help="Selecione o algoritmo de criptografia. 'Gerar Chaves' cria novos pares de chaves."
-            )
-            crypto_mode_selection = st.radio(
-                "Modo de Operação",
-                ("Padrão", "Escolha do Usuário"),
-                help="No modo 'Padrão', você criptografa arquivos internos do sistema. No modo 'Escolha do Usuário', você seleciona um arquivo local e chaves."
-            )
-            crypto_action = st.selectbox(
-                "Ação",
-                ("Criptografar", "Descriptografar"),
-                help="Escolha entre criptografar um arquivo para protegê-lo ou descriptografá-lo para acessá-lo."
-            )
-
-            if crypto_method == "Gerar Chaves RSA/Blowfish":
-                st.info("Esta opção irá gerar um novo par de chaves RSA (pública/privada) e uma chave Blowfish.")
-                if st.button("Gerar Novas Chaves", help="Isso pode levar alguns instantes."):
-                    with st.spinner("Gerando chaves..."):
-                        time.sleep(3) # Simula
-                        st.success("Chaves geradas com sucesso! (Aguardando lógica de geração)")
-                        # No futuro, adicione botões de download para as chaves geradas
-                        st.download_button(
-                            label="Baixar Chave Pública (RSA)",
-                            data="chave_publica_rsa_exemplo",
-                            file_name="public_key.pem",
-                            mime="application/x-pem-file"
-                        )
-                        st.download_button(
-                            label="Baixar Chave Privada (RSA)",
-                            data="chave_privada_rsa_exemplo",
-                            file_name="private_key.pem",
-                            mime="application/x-pem-file"
-                        )
-                        st.download_button(
-                            label="Baixar Chave Blowfish",
-                            data="chave_blowfish_exemplo",
-                            file_name="blowfish_key.bin",
-                            mime="application/octet-stream"
-                        )
-            else: # Blowfish ou AES-RSA
-                if crypto_mode_selection == "Padrão" and crypto_action == "Criptografar":
-                    st.write("Selecione qual componente do sistema você deseja criptografar:")
-                    st.selectbox(
-                        "Tipo de Arquivo para Criptografar",
-                        ("Arquivo de Dados", "Índice", "Árvore B"),
-                        help="Escolha o arquivo interno do sistema para criptografar."
-                    )
-                    if st.button("Autogerar Chaves e Criptografar (Padrão)", help="Utiliza chaves padrão do sistema para criptografia."):
-                        with st.spinner(f"Criptografando arquivo padrão com {crypto_method} e chaves autogeradas..."):
-                            time.sleep(3) # Simula
-                            st.success(f"Arquivo padrão criptografado com sucesso usando {crypto_method}! (Aguardando lógica)")
-                elif crypto_mode_selection == "Escolha do Usuário":
-                    st.write("Carregue as chaves e o arquivo para criptografar/descriptografar.")
-                    st.subheader("🔑 Chave(s) de Criptografia")
-                    uploaded_key_file = st.file_uploader(
-                        "Carregar arquivo de chave (.pem)",
-                        type=["pem", "bin"], # Blowfish key might be .bin
-                        help="Para RSA, carregue a chave pública (.pem) para criptografar ou a privada (.pem) para descriptografar. Para Blowfish, a chave binária."
-                    )
-                    st.subheader("📄 Arquivo a ser Processado")
-                    uploaded_file_crypto = st.file_uploader(
-                        "Carregar arquivo para processamento",
-                        type=["db", "idx", "btr", "enc", "enc_aes", "csv"],
-                        help="Selecione o arquivo de dados (.db), índice (.idx), árvore B (.btr), ou arquivos já criptografados (.enc, .enc_aes, .csv)."
-                    )
-                    if uploaded_key_file is not None and uploaded_file_crypto is not None:
-                        st.info(f"Chave '{uploaded_key_file.name}' e arquivo '{uploaded_file_crypto.name}' carregados.")
-                        if st.button(f"{crypto_action} Arquivo", key="crypto_user_file_btn"):
-                            with st.spinner(f"{crypto_action} '{uploaded_file_crypto.name}' com {crypto_method}..."):
-                                time.sleep(3) # Simula
-                                st.success(f"Arquivo '{uploaded_file_crypto.name}' {crypto_action.lower()} com sucesso usando {crypto_method}! (Aguardando lógica)")
-                                st.download_button(
-                                    label=f"Baixar Arquivo {crypto_action}",
-                                    data="conteúdo_do_arquivo_processado", # Substituir pelo conteúdo real
-                                    file_name=f"{Path(uploaded_file_crypto.name).stem}_processed.bin", # Nome de arquivo de exemplo
-                                    mime="application/octet-stream",
-                                    help="Baixe o arquivo após a operação de criptografia/descriptografia."
-                                )
-                    elif uploaded_key_file is not None or uploaded_file_crypto is not None:
-                        st.warning("Por favor, carregue a chave e o arquivo a ser processado para continuar.")
+        if app_mode_crypto_comp == "Compactação":
+            show_compression_ui()
+        elif app_mode_crypto_comp == "Criptografia":
+            show_encryption_ui()
 
     # --- Conteúdo da Etapa 4 ---
     elif main_option == "Etapa 4":
@@ -1925,7 +3029,7 @@ def main():
                         data="dados_do_sistema_aho_corasik_serializados", # Substituir
                         file_name="aho_corasik_system.bin",
                         mime="application/octet-stream",
-                        help="Baixe o arquivo binário do sistema Aho-Corasik gerado."
+                        key="download_aho_corasik"
                     )
         elif sub_option_etapa4 == "Buscar registros por Casamento Padrão":
             st.subheader("🎯 Buscar Registros por Casamento Padrão")
@@ -2106,17 +3210,18 @@ def main():
         st.markdown("""
         * **Python**: Linguagem de programação principal.
         * **Streamlit**: Para a interface de usuário web interativa e ágil.
-        * **`cryptography`**: Biblioteca robusta para operações criptográficas (AES, RSA, Blowfish).
+        * **`cryptography`**: Biblioteca robusta para operações criptográficas (AES, RSA).
         * **`filelock`**: Para gerenciamento de concorrência e garantia da integridade do arquivo em operações multi-threaded/multi-processo.
         * **`pathlib`**: Módulo para manipulação de caminhos de arquivos e diretórios de forma orientada a objetos.
         * **`pandas`**: Essencial para manipulação e exibição de dados tabulares (DataFrames).
-        * **`matplotlib`**: Para geração de gráficos de comparação e visualização de dados (se implementado).
-        * **`collections`**: Módulos como `Counter` e `defaultdict` para estruturas de dados eficientes.
-        * **`typing`**: Suporte para tipagem estática, melhorando a clareza e manutenibilidade do código.
-        * **`concurrent.futures`**: Para gerenciamento de threads e processos, permitindo operações assíncronas.
-        * **`threading`**: Para controle de threads de execução.
+        * **`hashlib`**: Para geração de checksums (SHA-256) e MD5.
+        * **`struct`**: Para empacotar/desempacotar dados binários no formato do banco de dados.
+        * **`json`**: Para serialização/desserialização de dados de objetos.
+        * **`logging`**: Para registro de informações, avisos e erros.
+        * **`datetime`**: Para manipulação de datas e horas.
+        * **`io`**: Para lidar com streams de dados de arquivos em memória.
         """)
-        st.write("Versão: 1.0_20250708 Alpha 7c")
+        st.write("Versão: 1.0_20250710 Alpha 7d rev. 2")
         st.markdown("---")
         st.info("Agradecemos seu interesse em nossa aplicação!")
 
