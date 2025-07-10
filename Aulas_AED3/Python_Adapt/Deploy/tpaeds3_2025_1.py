@@ -341,7 +341,7 @@ PORTUGUESE_TO_ENGLISH_HEADERS = {
     'ferimentos_nao_incapacitantes': 'injuries_non_incapacitating',
     'ferimentos_reportado_nao_evidente': 'injuries_reported_not_evident',
     'ferimentos_sem_indicacao': 'injuries_no_indication',
-    # Campos que podem estar no CSV mas são *derivados* no DataObject, e, portanto, serão ignorados do input data_dict
+    # Campos que podem estar no CSV but são *derivados* no DataObject, e, portanto, serão ignorados do input data_dict
     'hora_acidente': 'crash_hour',
     'dia_semana_acidente': 'crash_day_of_week',
     'mes_acidente': 'crash_month'
@@ -1292,7 +1292,7 @@ class LZWProcessor:
             
             total_bytes = len(data)
             processed_bytes = 0
-            bits = 9
+            bits = 9 # Initial bits for LZW
             max_code = 2**bits - 1
             
             for byte in data:
@@ -1320,7 +1320,7 @@ class LZWProcessor:
             
             with open(output_file_path, 'wb') as f:
                 f.write(len(compressed_data).to_bytes(4, byteorder='big')) # Número de códigos
-                f.write(initial_bits.to_bytes(1, byteorder='big')) # Salva o número inicial de bits (9)
+                f.write(bits.to_bytes(1, byteorder='big')) # Salva o número inicial de bits (9)
                 
                 buffer = 0
                 buffer_length = 0
@@ -1338,11 +1338,11 @@ class LZWProcessor:
                     # A lógica do apendice_v1.py para current_code_bits parece ser um erro.
                     # O número de bits para codificar um símbolo deve ser o `bits` atual do dicionário.
                     current_code_bits = bits # Usa o 'bits' atual que foi ajustado
-                    if code >= (1 << current_code_bits): # Se o código excede o tamanho atual de bits, aumenta
-                        current_code_bits = (code.bit_length() + 7) // 8 * 8 # Arredonda para o próximo byte
-                        if current_code_bits < 9: current_code_bits = 9 # Minimo de 9 bits
-                        if current_code_bits > 24: current_code_bits = 24 # Maximo de 24 bits
-
+                    # The original code had a complex calculation here that was likely incorrect for LZW.
+                    # The number of bits for a code should be determined by the maximum code value
+                    # currently in the dictionary, which is implicitly handled by `bits`.
+                    # So, we simply use the current `bits` value.
+                    
                     buffer = (buffer << current_code_bits) | code
                     buffer_length += current_code_bits
                     
@@ -2378,7 +2378,7 @@ def show_compression_ui():
                         st.warning(f"Não foi possível limpar o diretório temporário: {e}")
                 # Limpa arquivos temporários de saída da comparação se existirem
                 for temp_file in [huffman_output, lzw_output, huffman_decompressed_output, lzw_decompressed_output]:
-                    if 'temp_file' in locals() and Path(temp_file).exists():
+                    if Path(temp_file).exists(): # Verifica se o arquivo existe antes de tentar remover
                         try:
                             os.remove(temp_file)
                         except OSError as e:
@@ -2511,7 +2511,7 @@ def show_encryption_ui():
                     output_path = os.path.join(temp_dir_output, output_filename)
                     try:
                         Functions.blowfish_decrypt_file_func(input_file_path, output_path, password) # Chama o método da classe Functions
-                        st.success(f"Arquivo descriptografado com sucesso em '{output_filename}'!")
+                        st.success(f"Arquivo descriptografado com sucesso em '{output_path}'!")
                         with open(output_path, "rb") as f:
                             st.download_button(
                                 label="Baixar Arquivo Descriptografado",
