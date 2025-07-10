@@ -1,3 +1,4 @@
+# versão 7d com compactação estavel, criptografia em analise e gestão de arquivos do sistema em fase inicial 
 import base64
 import fnmatch
 import locale
@@ -1458,10 +1459,10 @@ class LZWProcessor:
                     progress = 0.5 + (len(decompressed_data) / (num_codes_expected * 3)) # Estimativa de progresso
                     progress_callback(progress, f"Descomprimindo... {len(decompressed_data)//1024}KB processados")
 
-            with open(output_file_path, 'wb') as f:
+            with open(output_path, 'wb') as f:
                 f.write(decompressed_data)
             
-            decompressed_size = os.path.getsize(output_file_path)
+            decompressed_size = os.path.getsize(output_path)
             compression_ratio = (compressed_size - decompressed_size) / compressed_size * 100
             process_time = time.time() - start_time
 
@@ -2511,7 +2512,7 @@ def show_encryption_ui():
                     output_path = os.path.join(temp_dir_output, output_filename)
                     try:
                         Functions.blowfish_decrypt_file_func(input_file_path, output_path, password) # Chama o método da classe Functions
-                        st.success(f"Arquivo descriptografado com sucesso em '{output_path}'!")
+                        st.success(f"Arquivo descriptografado com sucesso em '{output_filename}'!")
                         with open(output_path, "rb") as f:
                             st.download_button(
                                 label="Baixar Arquivo Descriptografado",
@@ -2684,6 +2685,47 @@ def show_encryption_ui():
             else:
                 st.warning("Por favor, selecione um arquivo de entrada, uma chave privada e forneça um nome de saída.")
 
+# --- Funções de Gerenciamento de Arquivos da Aplicação ---
+def list_app_files(root_dir: Path) -> List[Dict[str, Any]]:
+    """Lista todos os arquivos dentro do diretório raiz da aplicação."""
+    file_list = []
+    for dirpath, _, filenames in os.walk(root_dir):
+        for filename in filenames:
+            full_path = Path(dirpath) / filename
+            try:
+                stat_info = full_path.stat()
+                file_list.append({
+                    "Nome do Arquivo": filename,
+                    "Caminho Relativo": str(full_path.relative_to(root_dir)),
+                    "Tamanho (KB)": f"{stat_info.st_size / 1024:.2f}",
+                    "Última Modificação": datetime.fromtimestamp(stat_info.st_mtime).strftime('%Y-%m-%d %H:%M:%S'),
+                    "Caminho Completo": str(full_path) # Para uso interno na exclusão
+                })
+            except Exception as e:
+                logger.warning(f"Não foi possível obter informações para o arquivo {full_path}: {e}")
+    return file_list
+
+def delete_app_file(file_path: str):
+    """Exclui um arquivo do sistema."""
+    try:
+        # Previna a exclusão do LOG_FILE para evitar que o próprio log seja apagado enquanto a aplicação está rodando
+        if Path(file_path) == LOG_FILE:
+            st.error("Não é possível excluir o arquivo de log principal enquanto a aplicação está em execução.")
+            return False
+        
+        os.remove(file_path)
+        st.success(f"Arquivo '{Path(file_path).name}' excluído com sucesso!")
+        logger.info(f"Arquivo '{file_path}' excluído pelo usuário.")
+        return True
+    except OSError as e:
+        st.error(f"Erro ao excluir o arquivo '{Path(file_path).name}': {e}")
+        logger.error(f"Erro ao excluir arquivo '{file_path}': {e}")
+        return False
+    except Exception as e:
+        st.error(f"Erro inesperado ao excluir o arquivo '{Path(file_path).name}': {e}")
+        logger.error(f"Erro inesperado ao excluir arquivo '{file_path}': {e}")
+        return False
+
 # =====================================================================
 def main():
     st.set_page_config(layout="wide", page_title="Sistema de Gerenciamento de Acidentes de Trânsito", page_icon="🚨")
@@ -2698,7 +2740,7 @@ def main():
 
     st.sidebar.markdown("---")
     st.sidebar.subheader("Informações do Sistema")
-    st.sidebar.write("Versão: 1.0_20250708 Alpha 7c")
+    st.sidebar.write("Versão: 1.0_20250710 Alpha 7d rev.3")
     st.sidebar.write("Status do DB: Online ✅") # Simplificado
 
     # Garante que as chaves RSA e AES existam ao iniciar o aplicativo
@@ -2914,8 +2956,9 @@ def main():
             elif uploaded_db_file_e2 is not None or uploaded_idx_file_e2 is not None:
                 st.warning("Por favor, carregue AMBOS os arquivos (.db e .idx) para esta operação.")
         elif sub_option_etapa2 == "Inserir um registro":
+             st.info("Funcionalidade de inserção de registro aqui (a ser implementada ou integrada).")
              # Chamada para a função de adicionar registro do app_v6.py
-             add_record_v6("Manual",main_option) # Reutilizando a função add_record do app_v6.py
+             # add_record_v6("Manual",main_option) # Comentado pois add_record_v6 não está definida
         elif sub_option_etapa2 == "Editar um registro":
             st.subheader("✏️ Editar Registro Existente (com Atualização de Índice)")
             st.write("Modifique um registro e tenha certeza que o índice refletirá as mudanças.")
@@ -3090,13 +3133,14 @@ def main():
 
         st.markdown("---")
 
-        admin_opt=st.selectbox(
+        admin_opt_sub = st.selectbox( # Renomeado para evitar conflito com main_option
             "Selecione o Escopo da Operação",
-            ("Etapa 1: Apenas Banco de Dados", "Etapa 2: Banco de Dados e Índices"),
+            ("Etapa 1: Apenas Banco de Dados", "Etapa 2: Banco de Dados e Índices", "Gerenciar Arquivos da Aplicação"),
+            key="admin_scope_select", # Adicionado key
             help="Escolha o nível de arquivos a serem importados ou gerenciados."
         )
 
-        if admin_opt=="Etapa 1: Apenas Banco de Dados":
+        if admin_opt_sub=="Etapa 1: Apenas Banco de Dados":
             st.subheader("⬆️ Importar Banco de Dados (.db)")
             st.write("Faça upload de um arquivo `.db` para restaurar ou substituir o banco de dados principal.")
             uploaded_file_import_db = st.file_uploader(
@@ -3123,7 +3167,7 @@ def main():
                 else:
                     st.info("Confirme a exclusão marcando a caixa de seleção.")
 
-        if admin_opt=="Etapa 2: Banco de Dados e Índices":
+        elif admin_opt_sub=="Etapa 2: Banco de Dados e Índices":
             st.subheader("⬆️ Importar Arquivos de Índice e Banco de Dados")
             st.write("Faça upload de arquivos `.btr` (Árvore B), `.inv` (Índice Invertido) e `.idx` (Índice Geral) para restaurar os índices do sistema, juntamente com o `.db`.")
 
@@ -3165,6 +3209,49 @@ def main():
                         st.info("Recomenda-se reiniciar a aplicação para garantir a integridade.")
                 else:
                     st.info("Confirme a exclusão marcando a caixa de seleção.")
+        
+        elif admin_opt_sub == "Gerenciar Arquivos da Aplicação":
+            st.subheader("📂 Gerenciar Arquivos da Aplicação")
+            st.write("Visualize e exclua arquivos gerados pelo aplicativo. Tenha cuidado, pois a exclusão é permanente.")
+            
+            # Botão para recarregar a lista de arquivos
+            if st.button("Recarregar Lista de Arquivos", key="reload_files_btn"):
+                st.session_state['files_to_manage'] = list_app_files(DATA_ROOT_DIR)
+                st.success("Lista de arquivos recarregada.")
+
+            # Inicializa a lista de arquivos na sessão se não existir
+            if 'files_to_manage' not in st.session_state:
+                st.session_state['files_to_manage'] = list_app_files(DATA_ROOT_DIR)
+
+            files_df = pd.DataFrame(st.session_state['files_to_manage'])
+
+            if not files_df.empty:
+                st.dataframe(files_df[['Nome do Arquivo', 'Caminho Relativo', 'Tamanho (KB)', 'Última Modificação']], use_container_width=True)
+
+                st.markdown("---")
+                st.subheader("Excluir Arquivos Individualmente")
+                
+                # Cria um formulário para cada arquivo para permitir a exclusão individual
+                for index, row in files_df.iterrows():
+                    file_name = row["Nome do Arquivo"]
+                    file_path = row["Caminho Completo"]
+                    
+                    col_file, col_delete = st.columns([0.8, 0.2])
+                    with col_file:
+                        st.write(f"**{file_name}** ({row['Caminho Relativo']})")
+                    with col_delete:
+                        delete_confirmed = st.checkbox(f"Confirmar exclusão de '{file_name}'", key=f"confirm_delete_file_{index}")
+                        if delete_confirmed:
+                            if st.button(f"Excluir {file_name}", key=f"delete_file_btn_{index}"):
+                                if delete_app_file(file_path):
+                                    # Força a recarga da página para atualizar a lista de arquivos
+                                    st.session_state['files_to_manage'] = list_app_files(DATA_ROOT_DIR)
+                                    st.experimental_rerun()
+                                else:
+                                    st.error(f"Não foi possível excluir o arquivo: {file_name}")
+            else:
+                st.info("Nenhum arquivo encontrado no diretório da aplicação.")
+
         st.markdown("---")
 
         st.subheader("📜 Visualização e Exclusão de Arquivos de Log")
@@ -3172,15 +3259,23 @@ def main():
         col_log_view, col_log_delete = st.columns(2)
         with col_log_view:
             if st.button("Visualizar Conteúdo do Log", key="view_log_button", help="Exibe os registros de atividades do sistema."):
-                st.info("Exibindo conteúdo do log (Simulação)...")
-                st.code("2024-07-07 10:30:01 - INFO - Aplicação iniciada.\n2024-07-07 10:35:15 - WARNING - Tentativa de acesso negada.")
-                # Lógica real para ler e exibir o log
+                if LOG_FILE.exists():
+                    try:
+                        with open(LOG_FILE, "r", encoding="utf-8") as f:
+                            log_content = f.read()
+                        st.code(log_content)
+                    except Exception as e:
+                        st.error(f"Erro ao ler o arquivo de log: {e}")
+                else:
+                    st.info("Arquivo de log não encontrado.")
         with col_log_delete:
             if st.button("Excluir Arquivo de Log", key="delete_log_button", help="Remove o arquivo de log do sistema."):
                 if st.checkbox("Confirmar exclusão do arquivo de log", key="confirm_delete_log"):
-                    with st.spinner("Excluindo arquivo de log..."):
-                        time.sleep(1) # Simula
-                        st.success("Arquivo de log excluído com sucesso! (Aguardando lógica)")
+                    if delete_app_file(str(LOG_FILE)): # Chama a função de exclusão de arquivo
+                        st.success("Arquivo de log excluído com sucesso!")
+                        st.experimental_rerun() # Recarrega a página para atualizar o status
+                    else:
+                        st.error("Não foi possível excluir o arquivo de log.")
                 else:
                     st.info("Marque a caixa para confirmar a exclusão do log.")
 
@@ -3220,7 +3315,7 @@ def main():
         * **`datetime`**: Para manipulação de datas e horas.
         * **`io`**: Para lidar com streams de dados de arquivos em memória.
         """)
-        st.write("Versão: 1.0_20250708 Alpha 7c")
+        st.write("Versão: 1.0_20250710 Alpha 7d rev.3")
         st.markdown("---")
         st.info("Agradecemos seu interesse em nossa aplicação!")
 
